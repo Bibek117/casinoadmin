@@ -1,127 +1,167 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
+import Image from "next/image";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { PlusCircle, Search, Edit, Trash2 } from "lucide-react"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, Trash2 } from "lucide-react";
 
-// Mock data - replace with actual API calls
-const initialPosts = [
-  {
-    id: "1",
-    title: "Getting Started with Next.js",
-    excerpt: "Learn how to build modern web applications with Next.js",
-    status: "Published",
-    date: "2024-03-15"
-  },
-  {
-    id: "2",
-    title: "Understanding TypeScript",
-    excerpt: "A comprehensive guide to TypeScript fundamentals",
-    status: "Draft",
-    date: "2024-03-14"
-  },
-  {
-    id: "3",
-    title: "Mastering Tailwind CSS",
-    excerpt: "Tips and tricks for using Tailwind CSS effectively",
-    status: "Published",
-    date: "2024-03-13"
-  }
-]
+interface Banner {
+  id: string;
+  title: string;
+  status: "Active" | "Inactive";
+  sections: {
+    header: string;
+    description: string;
+    image?: string;
+  }[];
+}
 
-export default function ContentPage() {
-  const [posts, setPosts] = useState(initialPosts)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedPost, setSelectedPost] = useState<any>(null)
-  const [newPost, setNewPost] = useState({
+const initialBanners: Banner[] = [];
+
+export default function BannerManagement() {
+  const [banners, setBanners] = useState<Banner[]>(initialBanners);
+  const [newBanner, setNewBanner] = useState<{
+    title: string;
+    status: "Active" | "Inactive";
+  }>({
     title: "",
-    content: "",
-    excerpt: ""
-  })
+    status: "Active",
+  });
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const handleCreatePost = () => {
-    const post = {
-      id: String(posts.length + 1),
-      title: newPost.title,
-      excerpt: newPost.excerpt,
-      status: "Draft",
-      date: new Date().toISOString().split("T")[0]
+  const [sections, setSections] = useState<
+    { header: string; description: string; image?: string }[]
+  >([{ header: "", description: "", image: undefined }]);
+  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [activeTab, setActiveTab] = useState<"posts" | "create">("posts");
+  const handleAddSection = () => {
+    setSections([
+      ...sections,
+      { header: "", description: "", image: undefined },
+    ]);
+  };
+  const handleSectionChange = (
+    index: number,
+    field: keyof (typeof sections)[0],
+    value: string
+  ) => {
+    const updatedSections = [...sections];
+    updatedSections[index][field] = value;
+    setSections(updatedSections);
+  };
+  const handleImageChange = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const updatedSections = [...sections];
+      updatedSections[index].image = event.target?.result as string;
+      setSections(updatedSections);
+    };
+    reader.readAsDataURL(file);
+  };
+  const handleSubmitBanner = () => {
+    if (!newBanner.title) {
+      alert("Please enter a banner title.");
+      return;
     }
-    setPosts([post, ...posts])
-    setNewPost({ title: "", content: "", excerpt: "" })
-  }
-
-  const handleDeletePost = (postId: string) => {
-    setPosts(posts.filter(post => post.id !== postId))
-  }
+    const newBannerData: Banner = {
+      id: editingBanner ? editingBanner.id : String(banners.length + 1),
+      title: newBanner.title,
+      status: newBanner.status,
+      sections: sections,
+    };
+    if (editingBanner) {
+      setBanners(
+        banners.map((banner) =>
+          banner.id === editingBanner.id ? newBannerData : banner
+        )
+      );
+      setEditingBanner(null); 
+    } else {
+      setBanners([...banners, newBannerData]);
+    }
+    setNewBanner({ title: "", status: "Active" });
+    setSections([{ header: "", description: "", image: undefined }]); 
+    setActiveTab("posts"); 
+  };
+  const handleEditBanner = (banner: Banner) => {
+    setEditingBanner(banner);
+    setNewBanner({ title: banner.title, status: banner.status });
+    setSections(banner.sections);
+    setActiveTab("create"); 
+  };
+  const handleDeleteBanner = (bannerId: string) => {
+    setBanners(banners.filter((banner) => banner.id !== bannerId));
+  };
 
   return (
-    <Tabs defaultValue="posts" className="space-y-4">
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setActiveTab(value as "posts" | "create")}
+      className="space-y-4"
+    >
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">Content Management</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Banners Management
+        </h2>
         <TabsList>
-          <TabsTrigger value="posts">Posts</TabsTrigger>
-          <TabsTrigger value="create">Create</TabsTrigger>
+          <TabsTrigger value="posts">Banners</TabsTrigger>
+          <TabsTrigger value="create">
+            {editingBanner ? "Edit Banner" : "Add new"}
+          </TabsTrigger>
         </TabsList>
       </div>
 
       <TabsContent value="posts" className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search posts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredPosts.map((post) => (
-            <Card key={post.id}>
+          {banners.map((banner) => (
+            <Card key={banner.id}>
               <CardHeader>
-                <CardTitle>{post.title}</CardTitle>
-                <CardDescription>{post.excerpt}</CardDescription>
+                <CardTitle>{banner.title}</CardTitle>
+                <CardDescription>Status: {banner.status}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-between items-center">
-                  <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    post.status === "Published"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                  }`}>
-                    {post.status}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{post.date}</div>
+                <div className="space-y-4">
+                  {banner.sections.map((section, index) => (
+                    <div key={index} className="border p-4 rounded-lg">
+                      <h3 className="font-semibold">{section.header}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {section.description}
+                      </p>
+                      {section.image && (
+                        <div className="mt-2">
+                          <Image
+                            src={section.image}
+                            alt="Section"
+                            width={500}
+                            height={300}
+                            className="rounded-lg"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <div className="flex justify-end space-x-2 mt-4">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setSelectedPost(post)}
+                    onClick={() => handleEditBanner(banner)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeletePost(post.id)}
+                    onClick={() => handleDeleteBanner(banner.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -132,48 +172,109 @@ export default function ContentPage() {
         </div>
       </TabsContent>
 
-      <TabsContent value="create" className="space-y-4">
+      <TabsContent value="create" className="space-y-2">
         <Card>
           <CardHeader>
-            <CardTitle>Create New Post</CardTitle>
-            <CardDescription>Create a new blog post or article.</CardDescription>
+            <CardTitle>
+              {editingBanner ? "Edit Banner" : "Add New Banner"}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={newPost.title}
-                onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                placeholder="Enter post title"
-              />
+          <CardContent className="space-y-2">
+            <Label>Banner Title</Label>
+            <Input
+              value={newBanner.title}
+              onChange={(e) =>
+                setNewBanner({ ...newBanner, title: e.target.value })
+              }
+              placeholder="Enter banner title"
+            />
+            <Label>Status</Label>
+            <select
+              value={newBanner.status}
+              onChange={(e) =>
+                setNewBanner({
+                  ...newBanner,
+                  status: e.target.value as "Active" | "Inactive",
+                })
+              }
+              className="block w-full border p-2"
+            >
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+
+            <div className="space-y-4">
+              {sections.map((section, index) => (
+                <div key={index} className="border p-4 rounded-lg">
+                  <Label>Section {index + 1}</Label>
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <Label>Header</Label>
+                      <Input
+                        value={section.header}
+                        onChange={(e) =>
+                          handleSectionChange(index, "header", e.target.value)
+                        }
+                        placeholder="Enter section header"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Description</Label>
+                      <Input
+                        value={section.description}
+                        onChange={(e) =>
+                          handleSectionChange(
+                            index,
+                            "description",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Enter section description"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Image</Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageChange(index, file);
+                          }
+                        }}
+                      />
+                    </div>
+                    {section.image && (
+                      <div className="mt-2">
+                        <Image
+                          src={section.image}
+                          alt="Section"
+                          width={500}
+                          height={300}
+                          className="rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="excerpt">Excerpt</Label>
-              <Input
-                id="excerpt"
-                value={newPost.excerpt}
-                onChange={(e) => setNewPost({ ...newPost, excerpt: e.target.value })}
-                placeholder="Enter post excerpt"
-              />
+
+            <div className="flex flex-col gap-5">
+              {sections.length > 0 && (
+                <Button onClick={handleAddSection} className="w-40">
+                  Add Section
+                </Button>
+              )}
+              <Button onClick={handleSubmitBanner} className="w-40">
+                {editingBanner ? "Update Banner" : "Submit Banner"}
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
-              <Textarea
-                id="content"
-                value={newPost.content}
-                onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                placeholder="Write your post content here..."
-                className="min-h-[200px]"
-              />
-            </div>
-            <Button onClick={handleCreatePost} className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Post
-            </Button>
           </CardContent>
         </Card>
       </TabsContent>
     </Tabs>
-  )
+  );
 }
