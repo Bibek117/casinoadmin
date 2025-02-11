@@ -13,8 +13,10 @@ import {
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
+import { useAuth } from "@/context/AuthProvider"
 
 export function Header() {
+  const {logout} = useAuth();
   const { setTheme } = useTheme()
   const [notifications, setNotifications] = useState([
     { id: 1, message: "New user registered", time: "5m ago" },
@@ -105,7 +107,7 @@ export function Header() {
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

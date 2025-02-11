@@ -24,10 +24,24 @@ const sidebarNavItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+  // {
+  //   title: "Users",
+  //   href: "/dashboard/users",
+  //   icon: Users,
+  // },
   {
-    title: "Users",
-    href: "/dashboard/users",
+    title: "Users Management",
     icon: Users,
+    subItems: [
+      {
+        title: "Admins",
+        href: "/dashboard/admins",
+      },
+      {
+        title: "Users",
+        href: "/dashboard/users",
+      },
+    ],
   },
   {
     title: "Content",
