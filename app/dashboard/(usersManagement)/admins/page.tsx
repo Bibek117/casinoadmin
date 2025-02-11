@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label"
 const initialUsers = [
   {
     id: "1",
-    name: "Sarah Davis",
+    name: "Admin Davis",
     email: "sarah.davis@email.com",
     role: "Admin",
     status: "Active",
@@ -36,7 +36,7 @@ const initialUsers = [
   },
   {
     id: "2",
-    name: "Jackson Miller",
+    name: "Admin Miller",
     email: "jackson.m@email.com",
     role: "Editor",
     status: "Active",
@@ -44,7 +44,7 @@ const initialUsers = [
   },
   {
     id: "3",
-    name: "Amelia Johnson",
+    name: "Admin Johnson",
     email: "amelia.j@email.com",
     role: "User",
     status: "Inactive",
@@ -52,7 +52,7 @@ const initialUsers = [
   }
 ]
 
-export default function UsersPage() {
+export default function AdminPage() {
   const [users, setUsers] = useState(initialUsers)
   const [searchQuery, setSearchQuery] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
