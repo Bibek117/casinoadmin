@@ -1,6 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
+import useSWR from "swr";
 import {
   Table,
   TableBody,
@@ -8,11 +9,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { PlusCircle, Search, Edit, Trash2 } from "lucide-react"
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PlusCircle, Search, Edit, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,94 +22,81 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-
-// Mock data - replace with actual API calls
-const initialUsers = [
-  {
-    id: "1",
-    name: "Sarah Davis",
-    email: "sarah.davis@email.com",
-    role: "Admin",
-    status: "Active",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces"
-  },
-  {
-    id: "2",
-    name: "Jackson Miller",
-    email: "jackson.m@email.com",
-    role: "Editor",
-    status: "Active",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=64&h=64&fit=crop&crop=faces"
-  },
-  {
-    id: "3",
-    name: "Amelia Johnson",
-    email: "amelia.j@email.com",
-    role: "User",
-    status: "Inactive",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=faces"
-  }
-]
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import axiosInstance from "@/lib/axios";
+import { User } from "@/types/types";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<any>(null)
+  const { data: users = [] } = useSWR<User[]>(
+    "api/admin/users/clients",
+    async () => {
+      const res = await axiosInstance.get("api/admin/users/clients");
+      return res.data.data.clientUsers;
+    },
+    {
+      refreshInterval: 0,
+      dedupingInterval: 300000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     role: "",
-  })
+  });
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleAddUser = () => {
-    setEditingUser(null)
-    setFormData({ name: "", email: "", role: "" })
-    setIsDialogOpen(true)
-  }
+  // const handleAddUser = () => {
+  //   setEditingUser(null)
+  //   setFormData({ name: "", email: "", role: "" })
+  //   setIsDialogOpen(true)
+  // }
 
-  const handleEditUser = (user: any) => {
-    setEditingUser(user)
-    setFormData({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    })
-    setIsDialogOpen(true)
-  }
+  // const handleEditUser = (user: any) => {
+  //   setEditingUser(user)
+  //   setFormData({
+  //     name: user.name,
+  //     email: user.email,
+  //     role: user.role,
+  //   })
+  //   setIsDialogOpen(true)
+  // }
 
-  const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId))
-  }
+  // const handleDeleteUser = (userId: string) => {
+  //   setUsers(users.filter(user => user.id !== userId))
+  // }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editingUser) {
-      setUsers(users.map(user =>
-        user.id === editingUser.id
-          ? { ...user, ...formData }
-          : user
-      ))
-    } else {
-      setUsers([
-        ...users,
-        {
-          id: String(users.length + 1),
-          ...formData,
-          status: "Active",
-          avatar: `https://images.unsplash.com/photo-${Math.random()}?w=64&h=64&fit=crop&crop=faces`
-        }
-      ])
-    }
-    setIsDialogOpen(false)
-  }
+  // const handleSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   if (editingUser) {
+  //     setUsers(users.map(user =>
+  //       user.id === editingUser.id
+  //         ? { ...user, ...formData }
+  //         : user
+  //     ))
+  //   } else {
+  //     setUsers([
+  //       ...users,
+  //       {
+  //         id: String(users.length + 1),
+  //         ...formData,
+  //         status: "Active",
+  //         avatar: `https://images.unsplash.com/photo-${Math.random()}?w=64&h=64&fit=crop&crop=faces`
+  //       }
+  //     ])
+  //   }
+  //   setIsDialogOpen(false)
+  // }
 
   return (
     <div className="space-y-4">
@@ -135,7 +123,7 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
+              {/* <TableHead>Role</TableHead> */}
               <TableHead>Status</TableHead>
               {/* <TableHead className="text-right">Actions</TableHead> */}
             </TableRow>
@@ -147,22 +135,34 @@ export default function UsersPage() {
                   <div className="flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
                       <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                      <AvatarFallback>
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-muted-foreground">{user.email}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {user.email}
+                      </div>
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>{user.role}</TableCell>
+                {/* <TableCell>{user.role}</TableCell> */}
                 <TableCell>
-                  <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    user.status === "Active"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                  }`}>
-                    {user.status}
+                  <div
+                    // className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    //   user.status === "Active"
+                    //     ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                    //     : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                    // }`}
+                    className={
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                    }
+                  >
+                    {"Active"}
                   </div>
                 </TableCell>
                 {/* <TableCell className="text-right">
@@ -187,12 +187,14 @@ export default function UsersPage() {
         </Table>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingUser ? "Edit User" : "Add User"}</DialogTitle>
             <DialogDescription>
-              {editingUser ? "Edit user details below." : "Add a new user to the system."}
+              {editingUser
+                ? "Edit user details below."
+                : "Add a new user to the system."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -202,7 +204,9 @@ export default function UsersPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                 />
               </div>
               <div className="grid gap-2">
@@ -211,7 +215,9 @@ export default function UsersPage() {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                 />
               </div>
               <div className="grid gap-2">
@@ -219,16 +225,20 @@ export default function UsersPage() {
                 <Input
                   id="role"
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">{editingUser ? "Save Changes" : "Add User"}</Button>
+              <Button type="submit">
+                {editingUser ? "Save Changes" : "Add User"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
-  )
+  );
 }
