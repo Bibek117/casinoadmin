@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthProvider";
 import {
   Card,
   CardContent,
@@ -14,154 +15,152 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Trash2 } from "lucide-react";
+import axiosInstance from "@/lib/axios";
+import Image from "next/image";
 
-interface Banner {
+interface BannerGroup {
   id: string;
-  title: string;
-  status: "Active" | "Inactive";
-  sections: {
-    header: string;
-    description: string;
-    image?: string;
-  }[];
+  name: string;
+  is_active: boolean;
 }
 
-const initialBanners: Banner[] = [];
+interface Section {
+  title: string;
+  description: string;
+  image: File | null;
+  imagePreview: string | undefined;
+}
 
-export default function BannerManagement() {
-  const [banners, setBanners] = useState<Banner[]>(initialBanners);
-  const [newBanner, setNewBanner] = useState<{
-    title: string;
-    status: "Active" | "Inactive";
+export default function BannerGroupsPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [bannerGroups, setBannerGroups] = useState<BannerGroup[]>([]);
+  const [newBannerGroup, setNewBannerGroup] = useState<{
+    name: string;
+    is_active: boolean;
+    sections: Section[];
   }>({
-    title: "",
-    status: "Active",
+    name: "",
+    is_active: false,
+    sections: [{ title: "", description: "", image: null, imagePreview: undefined }]
   });
 
-  const [sections, setSections] = useState<
-    { header: string; description: string; image?: string }[]
-  >([{ header: "", description: "", image: undefined }]);
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
-  const [activeTab, setActiveTab] = useState<"posts" | "create">("posts");
-  const handleAddSection = () => {
-    setSections([
-      ...sections,
-      { header: "", description: "", image: undefined },
-    ]);
-  };
-  const handleSectionChange = (
-    index: number,
-    field: keyof (typeof sections)[0],
-    value: string
-  ) => {
-    const updatedSections = [...sections];
-    updatedSections[index][field] = value;
-    setSections(updatedSections);
-  };
-  const handleImageChange = (index: number, file: File) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const updatedSections = [...sections];
-      updatedSections[index].image = event.target?.result as string;
-      setSections(updatedSections);
-    };
-    reader.readAsDataURL(file);
-  };
-  const handleSubmitBanner = () => {
-    if (!newBanner.title) {
-      alert("Please enter a banner title.");
-      return;
+  const fetchBannerGroups = async () => {
+    try {
+      const response = await axiosInstance.get('/api/admin/banner-groups');
+      setBannerGroups(response.data.banner_groups);
+    } catch (error: any) {
+      console.error('Error fetching banner groups:', error);
+      if (error.response?.status === 401) {
+        router.push('/login');
+      }
     }
-    const newBannerData: Banner = {
-      id: editingBanner ? editingBanner.id : String(banners.length + 1),
-      title: newBanner.title,
-      status: newBanner.status,
-      sections: sections,
-    };
-    if (editingBanner) {
-      setBanners(
-        banners.map((banner) =>
-          banner.id === editingBanner.id ? newBannerData : banner
-        )
-      );
-      setEditingBanner(null); 
-    } else {
-      setBanners([...banners, newBannerData]);
-    }
-    setNewBanner({ title: "", status: "Active" });
-    setSections([{ header: "", description: "", image: undefined }]); 
-    setActiveTab("posts"); 
-  };
-  const handleEditBanner = (banner: Banner) => {
-    setEditingBanner(banner);
-    setNewBanner({ title: banner.title, status: banner.status });
-    setSections(banner.sections);
-    setActiveTab("create"); 
-  };
-  const handleDeleteBanner = (bannerId: string) => {
-    setBanners(banners.filter((banner) => banner.id !== bannerId));
   };
 
+  const handleImageChange = (index: number, file: File | null) => {
+    const updatedSections = [...newBannerGroup.sections];
+    updatedSections[index].image = file;
+    updatedSections[index].imagePreview = file ? URL.createObjectURL(file) : undefined;
+    setNewBannerGroup({
+      ...newBannerGroup,
+      sections: updatedSections
+    });
+  };
+
+  const handleCreateBannerGroup = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('name', newBannerGroup.name);
+      formData.append('is_active', newBannerGroup.is_active.toString());
+      
+      newBannerGroup.sections.forEach((section, index) => {
+        formData.append(`sections[${index}][title]`, section.title);
+        formData.append(`sections[${index}][description]`, section.description);
+        if (section.image) {
+          formData.append(`sections[${index}][image]`, section.image);
+        }
+      });
+
+      await axiosInstance.post('/api/admin/banner-groups', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      fetchBannerGroups();
+      setNewBannerGroup({
+        name: "",
+        is_active: false,
+        sections: [{ title: "", description: "", image: null, imagePreview: undefined }]
+      });
+    } catch (error: any) {
+      console.error('Error creating banner group:', error);
+      if (error.response?.status === 401) {
+        router.push('/login');
+      }
+    }
+  };
+
+  const handleDeleteBannerGroup = async (id: string) => {
+    try {
+      await axiosInstance.delete(`/api/admin/banner-groups/${id}`);
+      fetchBannerGroups();
+    } catch (error: any) {
+      console.error('Error deleting banner group:', error);
+      if (error.response?.status === 401) {
+        router.push('/login');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    fetchBannerGroups();
+  }, [user, router]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(value) => setActiveTab(value as "posts" | "create")}
-      className="space-y-4"
-    >
+    <Tabs defaultValue="list" className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Banners Management
-        </h2>
+        <h2 className="text-3xl font-bold tracking-tight">Banner Groups</h2>
         <TabsList>
-          <TabsTrigger value="posts">Banners</TabsTrigger>
-          <TabsTrigger value="create">
-            {editingBanner ? "Edit Banner" : "Add new"}
-          </TabsTrigger>
+          <TabsTrigger value="list">List</TabsTrigger>
+          <TabsTrigger value="create">Create New</TabsTrigger>
         </TabsList>
       </div>
 
-      <TabsContent value="posts" className="space-y-4">
+      <TabsContent value="list" className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {banners.map((banner) => (
-            <Card key={banner.id}>
+          {bannerGroups.map((group) => (
+            <Card key={group.id}>
               <CardHeader>
-                <CardTitle>{banner.title}</CardTitle>
-                <CardDescription>Status: {banner.status}</CardDescription>
+                <CardTitle>{group.name}</CardTitle>
+                <CardDescription>
+                  Status: {group.is_active ? 'Active' : 'Inactive'}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {banner.sections.map((section, index) => (
-                    <div key={index} className="border p-4 rounded-lg">
-                      <h3 className="font-semibold">{section.header}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {section.description}
-                      </p>
-                      {section.image && (
-                        <div className="mt-2">
-                          <Image
-                            src={section.image}
-                            alt="Section"
-                            width={500}
-                            height={300}
-                            className="rounded-lg"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-end space-x-2 mt-4">
+                <div className="flex justify-end space-x-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleEditBanner(banner)}
+                    onClick={() => window.location.href = `/dashboard/content/${group.id}/edit`}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteBanner(banner.id)}
+                    onClick={() => handleDeleteBannerGroup(group.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -172,106 +171,139 @@ export default function BannerManagement() {
         </div>
       </TabsContent>
 
-      <TabsContent value="create" className="space-y-2">
+      <TabsContent value="create">
         <Card>
           <CardHeader>
-            <CardTitle>
-              {editingBanner ? "Edit Banner" : "Add New Banner"}
-            </CardTitle>
+            <CardTitle>Create New Banner Group</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Label>Banner Title</Label>
-            <Input
-              value={newBanner.title}
-              onChange={(e) =>
-                setNewBanner({ ...newBanner, title: e.target.value })
-              }
-              placeholder="Enter banner title"
-            />
-            <Label>Status</Label>
-            <select
-              value={newBanner.status}
-              onChange={(e) =>
-                setNewBanner({
-                  ...newBanner,
-                  status: e.target.value as "Active" | "Inactive",
-                })
-              }
-              className="block w-full border p-2"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={newBannerGroup.name}
+                onChange={(e) => setNewBannerGroup({
+                  ...newBannerGroup,
+                  name: e.target.value
+                })}
+                placeholder="Enter banner group name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={newBannerGroup.is_active}
+                  onChange={(e) => setNewBannerGroup({
+                    ...newBannerGroup,
+                    is_active: e.target.checked
+                  })}
+                />
+                <span>Active</span>
+              </div>
+            </div>
 
             <div className="space-y-4">
-              {sections.map((section, index) => (
-                <div key={index} className="border p-4 rounded-lg">
-                  <Label>Section {index + 1}</Label>
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <Label>Header</Label>
+              <div className="flex justify-between items-center">
+                <Label>Sections</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setNewBannerGroup({
+                    ...newBannerGroup,
+                    sections: [...newBannerGroup.sections, { title: "", description: "", image: null, imagePreview: undefined }]
+                  })}
+                >
+                  Add Section
+                </Button>
+              </div>
+              
+              {newBannerGroup.sections.map((section, index) => (
+                <Card key={index}>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Section {index + 1}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Title</Label>
                       <Input
-                        value={section.header}
-                        onChange={(e) =>
-                          handleSectionChange(index, "header", e.target.value)
-                        }
-                        placeholder="Enter section header"
+                        value={section.title}
+                        onChange={(e) => {
+                          const updatedSections = [...newBannerGroup.sections];
+                          updatedSections[index].title = e.target.value;
+                          setNewBannerGroup({
+                            ...newBannerGroup,
+                            sections: updatedSections
+                          });
+                        }}
+                        placeholder="Enter section title"
                       />
                     </div>
-
-                    <div className="space-y-1">
+                    
+                    <div className="space-y-2">
                       <Label>Description</Label>
                       <Input
                         value={section.description}
-                        onChange={(e) =>
-                          handleSectionChange(
-                            index,
-                            "description",
-                            e.target.value
-                          )
-                        }
+                        onChange={(e) => {
+                          const updatedSections = [...newBannerGroup.sections];
+                          updatedSections[index].description = e.target.value;
+                          setNewBannerGroup({
+                            ...newBannerGroup,
+                            sections: updatedSections
+                          });
+                        }}
                         placeholder="Enter section description"
                       />
                     </div>
-                    <div className="space-y-1">
+                    
+                    <div className="space-y-2">
                       <Label>Image</Label>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
+                      <div className="space-y-4">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
                             handleImageChange(index, file);
-                          }
-                        }}
-                      />
-                    </div>
-                    {section.image && (
-                      <div className="mt-2">
-                        <Image
-                          src={section.image}
-                          alt="Section"
-                          width={500}
-                          height={300}
-                          className="rounded-lg"
+                          }}
                         />
+                        {section.imagePreview && (
+                          <div className="relative w-full h-40">
+                            <Image
+                              src={section.imagePreview}
+                              alt="Preview"
+                              fill
+                              className="object-contain rounded-md"
+                            />
+                          </div>
+                        )}
                       </div>
+                    </div>
+
+                    {newBannerGroup.sections.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                          const updatedSections = newBannerGroup.sections.filter((_, i) => i !== index);
+                          setNewBannerGroup({
+                            ...newBannerGroup,
+                            sections: updatedSections
+                          });
+                        }}
+                      >
+                        Remove Section
+                      </Button>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
 
-            <div className="flex flex-col gap-5">
-              {sections.length > 0 && (
-                <Button onClick={handleAddSection} className="w-40">
-                  Add Section
-                </Button>
-              )}
-              <Button onClick={handleSubmitBanner} className="w-40">
-                {editingBanner ? "Update Banner" : "Submit Banner"}
-              </Button>
-            </div>
+            <Button onClick={handleCreateBannerGroup} className="w-full">
+              Create Banner Group
+            </Button>
           </CardContent>
         </Card>
       </TabsContent>
