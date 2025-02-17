@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Trash2 } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import Image from "next/image";
+import { Switch } from "@/components/ui/switch"
 
 interface BannerGroup {
   id: string;
@@ -44,6 +45,9 @@ export default function BannerGroupsPage() {
     is_active: false,
     sections: [{ title: "", description: "", image: null, imagePreview: undefined }]
   });
+  const [activeTab, setActiveTab] = useState("list");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchBannerGroups = async () => {
     try {
@@ -71,32 +75,48 @@ export default function BannerGroupsPage() {
     try {
       const formData = new FormData();
       formData.append('name', newBannerGroup.name);
-      formData.append('is_active', newBannerGroup.is_active.toString());
+      formData.append('is_active', newBannerGroup.is_active ? '1' : '0');
       
       newBannerGroup.sections.forEach((section, index) => {
         formData.append(`sections[${index}][title]`, section.title);
         formData.append(`sections[${index}][description]`, section.description);
+        
         if (section.image) {
+          // New file upload
           formData.append(`sections[${index}][image]`, section.image);
+        } else if (section.imagePreview) {
+          // Keep existing image path (strip the domain if present)
+          const imagePath = section.imagePreview.replace(process.env.NEXT_PUBLIC_BACKEND_URL || '', '');
+          formData.append(`sections[${index}][image_url]`, imagePath);
         }
       });
 
-      await axiosInstance.post('/api/admin/banner-groups', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      fetchBannerGroups();
+      if (isEditing && editingId) {
+        formData.append('_method', 'PUT');
+        await axiosInstance.post(`/api/admin/banner-groups/${editingId}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        await axiosInstance.post('/api/admin/banner-groups', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      await fetchBannerGroups();
       setNewBannerGroup({
         name: "",
         is_active: false,
         sections: [{ title: "", description: "", image: null, imagePreview: undefined }]
       });
-    } catch (error: any) {
-      console.error('Error creating banner group:', error);
-      if (error.response?.status === 401) {
-        router.push('/login');
-      }
+      setIsEditing(false);
+      setEditingId(null);
+      setActiveTab("list");
+    } catch (error) {
+      console.error('Error creating/updating banner group:', error);
     }
   };
 
@@ -106,6 +126,47 @@ export default function BannerGroupsPage() {
       fetchBannerGroups();
     } catch (error: any) {
       console.error('Error deleting banner group:', error);
+      if (error.response?.status === 401) {
+        router.push('/login');
+      }
+    }
+  };
+
+  const handleEditClick = async (groupId: string) => {
+    try {
+      const response = await axiosInstance.get(`/api/admin/banner-groups/${groupId}`);
+      const bannerGroup = response.data.banner_group;
+      
+      if (!bannerGroup || !bannerGroup.banners) {
+        console.error('Invalid banner group data received');
+        return;
+      }
+      
+      setNewBannerGroup({
+        name: bannerGroup.name,
+        is_active: bannerGroup.is_active,
+        sections: bannerGroup.banners.map((banner: any) => ({
+          title: banner.title,
+          description: banner.description,
+          image: null,
+          imagePreview: banner.image_url ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${banner.image_url}` : undefined
+        }))
+      });
+      
+      setEditingId(groupId);
+      setIsEditing(true);
+      setActiveTab("create");
+    } catch (error) {
+      console.error('Error fetching banner group:', error);
+    }
+  };
+
+  const handleToggleActive = async (groupId: string) => {
+    try {
+      const response = await axiosInstance.patch(`/api/admin/banner-groups/${groupId}/toggle-active`);
+      fetchBannerGroups();
+    } catch (error: any) {
+      console.error('Error toggling banner group:', error);
       if (error.response?.status === 401) {
         router.push('/login');
       }
@@ -129,52 +190,71 @@ export default function BannerGroupsPage() {
   }
 
   return (
-    <Tabs defaultValue="list" className="space-y-4">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Banner Groups</h2>
         <TabsList>
           <TabsTrigger value="list">List</TabsTrigger>
-          <TabsTrigger value="create">Create New</TabsTrigger>
+          <TabsTrigger value="create">{isEditing ? 'Edit' : 'Create New'}</TabsTrigger>
         </TabsList>
       </div>
 
       <TabsContent value="list" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {bannerGroups.map((group) => (
-            <Card key={group.id}>
-              <CardHeader>
-                <CardTitle>{group.name}</CardTitle>
-                <CardDescription>
-                  Status: {group.is_active ? 'Active' : 'Inactive'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => window.location.href = `/dashboard/content/${group.id}/edit`}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteBannerGroup(group.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {bannerGroups.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>No Banner Groups</CardTitle>
+              <CardDescription>
+                There are no banner groups created yet. Use the "Create New" tab to add one.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {bannerGroups.map((group) => (
+              <Card key={group.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>{group.name}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={group.is_active}
+                        onCheckedChange={() => handleToggleActive(group.id)}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {group.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditClick(group.id)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteBannerGroup(group.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </TabsContent>
 
       <TabsContent value="create">
         <Card>
           <CardHeader>
-            <CardTitle>Create New Banner Group</CardTitle>
+            <CardTitle>{isEditing ? 'Edit Banner Group' : 'Create New Banner Group'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -302,7 +382,7 @@ export default function BannerGroupsPage() {
             </div>
 
             <Button onClick={handleCreateBannerGroup} className="w-full">
-              Create Banner Group
+              {isEditing ? 'Update Banner Group' : 'Create Banner Group'}
             </Button>
           </CardContent>
         </Card>
