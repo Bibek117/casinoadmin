@@ -123,12 +123,9 @@ export default function BannerGroupsPage() {
   const handleDeleteBannerGroup = async (id: string) => {
     try {
       await axiosInstance.delete(`/api/admin/banner-groups/${id}`);
-      fetchBannerGroups();
-    } catch (error: any) {
+      setBannerGroups(prevGroups => prevGroups.filter(group => group.id !== id));
+    } catch (error) {
       console.error('Error deleting banner group:', error);
-      if (error.response?.status === 401) {
-        router.push('/login');
-      }
     }
   };
 
