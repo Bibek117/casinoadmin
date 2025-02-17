@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { useRouter } from 'next/router';
 
 const axiosInstance = axios.create({
     baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
@@ -17,8 +16,7 @@ axiosInstance.interceptors.response.use(
     },
     (error) => {
         if (error.response && error.response.status === 401) {
-            const router = useRouter();
-            router.push('/login');
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }
