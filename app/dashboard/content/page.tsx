@@ -48,11 +48,13 @@ export default function BannerGroupsPage() {
   const [activeTab, setActiveTab] = useState("list");
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [hasActiveBannerGroup, setHasActiveBannerGroup] = useState(false);
 
   const fetchBannerGroups = async () => {
     try {
       const response = await axiosInstance.get('/api/admin/banner-groups');
       setBannerGroups(response.data.banner_groups);
+      setHasActiveBannerGroup(response.data.banner_groups.some((group: BannerGroup) => group.is_active));
     } catch (error: any) {
       console.error('Error fetching banner groups:', error);
       if (error.response?.status === 401) {
@@ -75,7 +77,7 @@ export default function BannerGroupsPage() {
     try {
       const formData = new FormData();
       formData.append('name', newBannerGroup.name);
-      formData.append('is_active', newBannerGroup.is_active ? '1' : '0');
+      formData.append('is_active', (!isEditing && hasActiveBannerGroup) ? '0' : newBannerGroup.is_active ? '1' : '0');
       
       newBannerGroup.sections.forEach((section, index) => {
         formData.append(`sections[${index}][title]`, section.title);
@@ -122,10 +124,19 @@ export default function BannerGroupsPage() {
 
   const handleDeleteBannerGroup = async (id: string) => {
     try {
-      await axiosInstance.delete(`/api/admin/banner-groups/${id}`);
-      setBannerGroups(prevGroups => prevGroups.filter(group => group.id !== id));
-    } catch (error) {
-      console.error('Error deleting banner group:', error);
+        const response = await axiosInstance.delete(`/api/admin/banner-groups/${id}`);
+        if (response.data.error) {
+            // You might want to show this message to the user with a toast or alert
+            console.error(response.data.message);
+            return;
+        }
+        setBannerGroups(prevGroups => prevGroups.filter(group => group.id !== id));
+    } catch (error: any) {
+        console.error('Error deleting banner group:', error);
+        // You might want to show this error to the user
+        if (error.response?.data?.message) {
+            console.error(error.response.data.message);
+        }
     }
   };
 
@@ -161,7 +172,7 @@ export default function BannerGroupsPage() {
   const handleToggleActive = async (groupId: string) => {
     try {
       const response = await axiosInstance.patch(`/api/admin/banner-groups/${groupId}/toggle-active`);
-      fetchBannerGroups();
+      setBannerGroups(response.data.banner_groups);
     } catch (error: any) {
       console.error('Error toggling banner group:', error);
       if (error.response?.status === 401) {
@@ -237,6 +248,8 @@ export default function BannerGroupsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteBannerGroup(group.id)}
+                      disabled={group.is_active}
+                      title={group.is_active ? "Deactivate banner group before deleting" : "Delete banner group"}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -267,18 +280,20 @@ export default function BannerGroupsPage() {
             </div>
             
             <div className="space-y-2">
-              <Label>Status</Label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={newBannerGroup.is_active}
-                  onChange={(e) => setNewBannerGroup({
-                    ...newBannerGroup,
-                    is_active: e.target.checked
-                  })}
-                />
-                <span>Active</span>
-              </div>
+              {(!hasActiveBannerGroup && !isEditing) && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={newBannerGroup.is_active}
+                      onCheckedChange={(checked) => setNewBannerGroup({
+                        ...newBannerGroup,
+                        is_active: checked
+                      })}
+                    />
+                    <span>Active</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
