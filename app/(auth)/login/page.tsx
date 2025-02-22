@@ -31,8 +31,10 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login(formData);
-      router.push("/dashboard");
+      const success = await login(formData);
+      if (success) {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError("Invalid email or password. Please try again.");
       console.error("Login failed:", err);

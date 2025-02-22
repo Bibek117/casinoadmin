@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Card,
   CardContent,
@@ -13,84 +13,161 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { motion } from "framer-motion"
-import { Shield, Plus } from "lucide-react"
+import { Shield, Trash2, Edit } from "lucide-react"
+import axiosInstance from "@/lib/axios"
 
-// Mock permissions data - replace with actual permissions from your backend
-const availablePermissions = [
-  {
-    category: "User Management",
-    permissions: [
-      { id: "user-view", label: "View Users" },
-      { id: "user-create", label: "Create Users" },
-      { id: "user-edit", label: "Edit Users" },
-      { id: "user-delete", label: "Delete Users" },
-    ],
-  },
-  {
-    category: "Content Management",
-    permissions: [
-      { id: "content-view", label: "View Content" },
-      { id: "content-create", label: "Create Content" },
-      { id: "content-edit", label: "Edit Content" },
-      { id: "content-publish", label: "Publish Content" },
-    ],
-  },
-  {
-    category: "Settings",
-    permissions: [
-      { id: "settings-view", label: "View Settings" },
-      { id: "settings-edit", label: "Edit Settings" },
-      { id: "settings-system", label: "System Settings" },
-    ],
-  },
-]
+interface Permission {
+  id: string;
+  name: string;
+  guard_name: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  permissions: string[];
+}
 
 export default function RolesPage() {
+  const [roles, setRoles] = useState<Role[]>([])
+  const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([])
+  const [activeTab, setActiveTab] = useState("list")
   const [roleName, setRoleName] = useState("")
-  const [roleDescription, setRoleDescription] = useState("")
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
-  const handlePermissionToggle = (permissionId: string) => {
+  useEffect(() => {
+    fetchRoles()
+    fetchPermissions()
+  }, [])
+
+  const fetchRoles = async () => {
+    try {
+      const response = await axiosInstance.get('/api/admin/roles/all')
+      setRoles(response.data.roles)
+    } catch (error) {
+      console.error('Error fetching roles:', error)
+    }
+  }
+
+  const fetchPermissions = async () => {
+    try {
+      const response = await axiosInstance.get('/api/admin/roles/permissions')
+      setAvailablePermissions(response.data.permissions)
+    } catch (error) {
+      console.error('Error fetching permissions:', error)
+    }
+  }
+
+  const handlePermissionToggle = (permission: Permission) => {
     setSelectedPermissions((current) =>
-      current.includes(permissionId)
-        ? current.filter((id) => id !== permissionId)
-        : [...current, permissionId]
+      current.includes(permission.name)
+        ? current.filter((name) => name !== permission.name)
+        : [...current, permission.name]
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement role creation with selected permissions
-    console.log({
-      name: roleName,
-      description: roleDescription,
-      permissions: selectedPermissions,
-    })
+    try {
+      if (isEditing && editingId) {
+        await axiosInstance.put(`/api/admin/roles/update`, {
+          role_id: editingId,
+          permissions: selectedPermissions
+        })
+      } else {
+        await axiosInstance.post(`/api/admin/roles/create`, {
+          name: roleName,
+          permissions: selectedPermissions
+        })
+      }
+      await fetchRoles()
+      setRoleName("")
+      setSelectedPermissions([])
+      setIsEditing(false)
+      setEditingId(null)
+      setActiveTab("list")
+    } catch (error) {
+      console.error('Error saving role:', error)
+    }
+  }
+
+  const handleDeleteRole = async (id: string) => {
+    try {
+      await axiosInstance.delete(`/api/admin/roles/delete`, {
+        data: { role_id: id }
+      })
+      setRoles(prevRoles => prevRoles.filter(role => role.id !== id))
+    } catch (error) {
+      console.error('Error deleting role:', error)
+    }
+  }
+
+  const handleEditClick = (roleId: string) => {
+    const role = roles.find(role => role.id === roleId)
+    if (!role) return
+    
+    setRoleName(role.name)
+    setSelectedPermissions(role.permissions)
+    setEditingId(roleId)
+    setIsEditing(true)
+    setActiveTab("create")
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Role Management</h2>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Role
-        </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
+      <Tabs defaultValue="list" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="list">View Roles</TabsTrigger>
+          <TabsTrigger value="create">Create Role</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list">
+          <div className="grid gap-4">
+            {roles.map((role) => (
+              <Card key={role.id}>
+                <CardHeader>
+                  <CardTitle>{role.name}</CardTitle>
+                  <CardDescription>
+                    {role.permissions.length} permissions assigned
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditClick(role.id)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteRole(role.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="create">
           <Card>
             <CardHeader>
-              <CardTitle>Create New Role</CardTitle>
+              <CardTitle>{isEditing ? 'Edit Role' : 'Create New Role'}</CardTitle>
               <CardDescription>
-                Define a new role and assign permissions
+                {isEditing ? 'Modify role and permissions' : 'Define a new role and assign permissions'}
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
@@ -102,81 +179,41 @@ export default function RolesPage() {
                     placeholder="Enter role name"
                     value={roleName}
                     onChange={(e) => setRoleName(e.target.value)}
+                    disabled={isEditing}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    placeholder="Enter role description"
-                    value={roleDescription}
-                    onChange={(e) => setRoleDescription(e.target.value)}
-                  />
+                
+                <div className="space-y-4">
+                  <Label>Permissions</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {availablePermissions.map((permission) => (
+                      <div
+                        key={permission.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={permission.name}
+                          checked={selectedPermissions.includes(permission.name)}
+                          onCheckedChange={() => handlePermissionToggle(permission)}
+                        />
+                        <Label htmlFor={permission.name} className="text-sm">
+                          {permission.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button type="submit" className="w-full">
                   <Shield className="mr-2 h-4 w-4" />
-                  Create Role
+                  {isEditing ? 'Update Role' : 'Create Role'}
                 </Button>
               </CardFooter>
             </form>
           </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Assign Permissions</CardTitle>
-              <CardDescription>
-                Select the permissions for this role
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-6">
-                  {availablePermissions.map((category, index) => (
-                    <motion.div
-                      key={category.category}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <h3 className="font-semibold mb-3">{category.category}</h3>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {category.permissions.map((permission) => (
-                          <div
-                            key={permission.id}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={permission.id}
-                              checked={selectedPermissions.includes(permission.id)}
-                              onCheckedChange={() =>
-                                handlePermissionToggle(permission.id)
-                              }
-                            />
-                            <Label
-                              htmlFor={permission.id}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {permission.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
