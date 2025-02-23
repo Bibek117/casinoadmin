@@ -27,7 +27,12 @@ interface Permission {
 interface Role {
   id: string;
   name: string;
-  permissions: string[];
+  permissions: Permission[];
+}
+
+interface PermissionGroup {
+  name: string;
+  permissions: Permission[];
 }
 
 export default function RolesPage() {
@@ -63,11 +68,34 @@ export default function RolesPage() {
   }
 
   const handlePermissionToggle = (permission: Permission) => {
-    setSelectedPermissions((current) =>
+    const [groupName, action] = permission.name.split('-');
+    
+    // If trying to uncheck a "view" permission
+    if (action === 'view' && selectedPermissions.includes(permission.name)) {
+      // Remove all permissions from this group
+      setSelectedPermissions(current =>
+        current.filter(name => !name.startsWith(groupName + '-'))
+      );
+      return;
+    }
+
+    // If trying to check a non-view permission
+    if (action !== 'view') {
+      const viewPermission = `${groupName}-view`;
+      const hasViewPermission = selectedPermissions.includes(viewPermission);
+      
+      if (!hasViewPermission) {
+        // Can't select non-view permissions without view permission
+        return;
+      }
+    }
+
+    // Normal toggle behavior
+    setSelectedPermissions(current =>
       current.includes(permission.name)
-        ? current.filter((name) => name !== permission.name)
+        ? current.filter(name => name !== permission.name)
         : [...current, permission.name]
-    )
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,30 +135,57 @@ export default function RolesPage() {
   }
 
   const handleEditClick = (roleId: string) => {
-    const role = roles.find(role => role.id === roleId)
-    if (!role) return
+    const role = roles.find(role => role.id === roleId);
+    if (!role) return;
     
-    setRoleName(role.name)
-    setSelectedPermissions(role.permissions)
-    setEditingId(roleId)
-    setIsEditing(true)
-    setActiveTab("create")
-  }
+    console.log('Editing role:', role);
+    console.log('Role permissions:', role.permissions);
+    
+    setRoleName(role.name);
+    // Extract just the permission names from the permission objects
+    const permissionNames = role.permissions.map(permission => permission.name);
+    console.log('Setting permission names:', permissionNames);
+    setSelectedPermissions(permissionNames);
+    setEditingId(roleId);
+    setIsEditing(true);
+    setActiveTab("create");
+  };
+
+  const groupPermissions = (permissions: Permission[]): PermissionGroup[] => {
+    const groups = permissions.reduce((acc, permission) => {
+      const groupName = permission.name.split('-')[0];
+      
+      const displayName = groupName
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      if (!acc[groupName]) {
+        acc[groupName] = {
+          name: displayName,
+          permissions: []
+        };
+      }
+      acc[groupName].permissions.push(permission);
+      return acc;
+    }, {} as Record<string, PermissionGroup>);
+
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">Role Management</h2>
-      </div>
-
       <Tabs defaultValue="list" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="list">View Roles</TabsTrigger>
-          <TabsTrigger value="create">Create Role</TabsTrigger>
-        </TabsList>
+        <div className="flex justify-between items-center">
+          <h2 className="text-3xl font-bold tracking-tight">Role Management</h2>
+          <TabsList>
+            <TabsTrigger value="list">View Roles</TabsTrigger>
+            <TabsTrigger value="create">Create Role</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="list">
-          <div className="grid gap-4">
+        <TabsContent value="list" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {roles.map((role) => (
               <Card key={role.id}>
                 <CardHeader>
@@ -162,56 +217,79 @@ export default function RolesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="create">
-          <Card>
-            <CardHeader>
-              <CardTitle>{isEditing ? 'Edit Role' : 'Create New Role'}</CardTitle>
-              <CardDescription>
-                {isEditing ? 'Modify role and permissions' : 'Define a new role and assign permissions'}
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Role Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter role name"
-                    value={roleName}
-                    onChange={(e) => setRoleName(e.target.value)}
-                    disabled={isEditing}
-                  />
-                </div>
-                
-                <div className="space-y-4">
-                  <Label>Permissions</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {availablePermissions.map((permission) => (
-                      <div
-                        key={permission.id}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={permission.name}
-                          checked={selectedPermissions.includes(permission.name)}
-                          onCheckedChange={() => handlePermissionToggle(permission)}
-                        />
-                        <Label htmlFor={permission.name} className="text-sm">
-                          {permission.name}
-                        </Label>
-                      </div>
-                    ))}
+        <TabsContent value="create" className="mt-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>{isEditing ? 'Edit Role' : 'Create New Role'}</CardTitle>
+                <CardDescription>
+                  {isEditing ? 'Modify role and permissions' : 'Define a new role and assign permissions'}
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Role Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="Enter role name"
+                      value={roleName}
+                      onChange={(e) => setRoleName(e.target.value)}
+                      disabled={isEditing}
+                    />
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full">
-                  <Shield className="mr-2 h-4 w-4" />
-                  {isEditing ? 'Update Role' : 'Create Role'}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
+                  
+                  <div className="space-y-4">
+                    <Label className="text-lg">Permissions</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {groupPermissions(availablePermissions).map((group) => (
+                        <div key={group.name} className="border rounded-lg p-4">
+                          <h3 className="font-medium text-sm text-muted-foreground mb-3">{group.name}</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            {group.permissions.map((permission) => {
+                              const [groupName, action] = permission.name.split('-');
+                              const viewPermission = `${groupName}-view`;
+                              const isDisabled = action !== 'view' && !selectedPermissions.includes(viewPermission);
+
+                              return (
+                                <div
+                                  key={permission.id}
+                                  className="flex items-center space-x-2"
+                                >
+                                  <Checkbox
+                                    id={permission.name}
+                                    checked={selectedPermissions.includes(permission.name)}
+                                    onCheckedChange={() => handlePermissionToggle(permission)}
+                                    disabled={isDisabled}
+                                  />
+                                  <Label 
+                                    htmlFor={permission.name} 
+                                    className={`text-sm ${isDisabled ? 'text-muted-foreground' : ''}`}
+                                  >
+                                    {action}
+                                  </Label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full">
+                    <Shield className="mr-2 h-4 w-4" />
+                    {isEditing ? 'Update Role' : 'Create Role'}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </motion.div>
         </TabsContent>
       </Tabs>
     </div>
