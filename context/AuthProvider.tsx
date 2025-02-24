@@ -40,24 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const response = await axiosInstance.get("/api/user");
-        setUser(response.data);
-        localStorage.setItem("user", JSON.stringify(response.data));
-      } catch (error) {
-        setUser(null);
-        localStorage.removeItem("user");
-      }
-      setLoading(false);
-    };
-
-    if (!user) {
-      checkUser();
-    }
-  }, [user]);
-
   const csrf = () => axiosInstance.get("/sanctum/csrf-cookie");
 
   const login = async (credentials: {
