@@ -13,7 +13,7 @@ type User = Record<string, unknown>;
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: { email: string; password: string }) => Promise<boolean>;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,48 +36,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setUser(null);
     }
+
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;  // Don't check if no token exists
-        
-        const response = await axiosInstance.get("/api/user");
-        setUser(response.data);
-        localStorage.setItem("user", JSON.stringify(response.data));
-      } catch (error) {
-        setUser(null);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-      }
-      setLoading(false);
-    };
-
-    if (!user) {
-      checkUser();
-    }
-  }, []); // Remove user from dependencies
-
   const csrf = () => axiosInstance.get("/sanctum/csrf-cookie");
 
-  const login = async (credentials: { email: string; password: string }) => {
+  const login = async (credentials: {
+    email: string;
+    password: string;
+  }): Promise<void> => {
+    await csrf();
     try {
-      const response = await axiosInstance.post('/login', credentials);
-      // Store the token
-      const token = response.data.token;
-      localStorage.setItem('token', token);
-      
-      // Get user data
-      const userResponse = await axiosInstance.get('/api/user');
-      setUser(userResponse.data);
-      
-      // Don't use window.location.href - it causes a full page reload
-      // Instead, let Next.js router handle the navigation
-      return true;
+      await axiosInstance.post("/login", credentials);
+      const userData = await axiosInstance.get("api/user");
+      setUser(userData.data);
+      localStorage.setItem("user", JSON.stringify(userData.data));
     } catch (error) {
+      console.error("Login failed:", error);
       throw error;
     }
   };
