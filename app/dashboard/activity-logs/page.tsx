@@ -213,6 +213,7 @@ export default function ActivityLogsPage() {
                 <SelectItem value="users">Users</SelectItem>
                 <SelectItem value="banners">Banners</SelectItem>
                 <SelectItem value="banner_groups">Banner Groups</SelectItem>
+                <SelectItem value="auth">Authentication</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -249,7 +250,9 @@ export default function ActivityLogsPage() {
                     {activity.description}
                   </CardTitle>
                   <CardDescription>
-                    {activity.log_name} - {activity.subject_type.split('\\').pop()} #{activity.subject_id}
+                    {activity.subject_type 
+                      ? `${activity.subject_type.split('\\').pop()} #${activity.subject_id}`
+                      : activity.log_name}
                   </CardDescription>
                 </div>
                 <span className="text-sm text-muted-foreground">
