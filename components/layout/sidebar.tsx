@@ -54,6 +54,11 @@ const sidebarNavItems = [
     icon: MessageSquare,
   },
   {
+    title: "Activity Logs",
+    href: "/dashboard/activity-logs",
+    icon: FileText,
+  },
+  {
     title: "Roles & Permissions",
     icon: Shield,
     subItems: [
