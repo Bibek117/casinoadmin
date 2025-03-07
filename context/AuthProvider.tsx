@@ -29,21 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = localStorage.getItem("user");
     const storedPermissions = localStorage.getItem("permissions");
 
-    if (storedUser) {
+    if (storedUser && storedPermissions) {
       try {
         const parsedUser = JSON.parse(storedUser);
+        const parsedPermissions = JSON.parse(storedPermissions);
         setUser(parsedUser);
-        // Fetch permissions when user exists
-        axiosInstance.get("api/admin/users/permissions")
-          .then(response => {
-            setPermissions(response.data.permissions);
-            localStorage.setItem("permissions", JSON.stringify(response.data.permissions));
-          })
-          .catch(error => {
-            console.error("Failed to fetch permissions:", error);
-          });
+        setPermissions(parsedPermissions);
       } catch (error) {
-        console.error("Failed to parse user data from localStorage:", error);
+        console.error("Failed to parse stored data:", error);
         localStorage.removeItem("user");
         localStorage.removeItem("permissions");
         setUser(null);
@@ -53,7 +46,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setPermissions([]);
     }
-
     setLoading(false);
   }, []);
 
@@ -66,8 +58,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await csrf();
     try {
       await axiosInstance.post("/login", credentials);
-      const userData = await axiosInstance.get("api/user");
-      const permissionsData = await axiosInstance.get("api/admin/users/permissions");
+      const [userData, permissionsData] = await Promise.all([
+        axiosInstance.get("api/user"),
+        axiosInstance.get("api/admin/users/permissions")
+      ]);
       
       setUser(userData.data);
       setPermissions(permissionsData.data.permissions);
