@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LayoutDashboard,
   Users,
@@ -12,12 +12,12 @@ import {
   Bell,
   ChevronDown,
   Shield,
-} from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { usePermission } from "@/hooks/usePermission"
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { usePermission } from "@/hooks/usePermission";
 
 const sidebarNavItems = [
   {
@@ -49,12 +49,17 @@ const sidebarNavItems = [
     title: "Banner Management",
     href: "/dashboard/banner",
     icon: FileText,
-    permission: "banner-view"
+    permission: "banner-view",
   },
   {
     title: "Chat",
     href: "/dashboard/chat",
     icon: MessageSquare,
+  },
+  {
+    title: "Activity Logs",
+    href: "/dashboard/activity-logs",
+    icon: FileText,
   },
   {
     title: "Roles & Permissions",
@@ -66,41 +71,37 @@ const sidebarNavItems = [
         href: "/dashboard/roles",
       },
       {
-        title: "Permissions",
-        href: "/dashboard/permissions",
-      },
-      {
         title: "Role Assignment",
         href: "/dashboard/role-assignment",
-        permission: "role-assign"
+        permission: "role-assign",
       },
     ],
   },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
-]
+  // {
+  //   title: "Settings",
+  //   href: "/dashboard/settings",
+  //   icon: Settings,
+  // },
+];
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar({ className }: SidebarProps) {
-  const pathname = usePathname()
-  const { can } = usePermission()
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const pathname = usePathname();
+  const { can } = usePermission();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const toggleExpand = (title: string) => {
     setExpandedItems((prev) =>
       prev.includes(title)
         ? prev.filter((item) => item !== title)
         : [...prev, title]
-    )
-  }
+    );
+  };
 
-  const renderNavItem = (item: typeof sidebarNavItems[0]) => {
+  const renderNavItem = (item: (typeof sidebarNavItems)[0]) => {
     if (item.permission && !can(item.permission)) {
-      return null
+      return null;
     }
 
     if (item.subItems) {
@@ -121,23 +122,25 @@ export function Sidebar({ className }: SidebarProps) {
             <div className="pl-6 space-y-1">
               {item.subItems.map((subItem) => {
                 if (subItem.permission && !can(subItem.permission)) {
-                  return null
+                  return null;
                 }
                 return (
                   <Link key={subItem.href} href={subItem.href}>
                     <Button
-                      variant={pathname === subItem.href ? "secondary" : "ghost"}
+                      variant={
+                        pathname === subItem.href ? "secondary" : "ghost"
+                      }
                       className="w-full justify-start"
                     >
                       {subItem.title}
                     </Button>
                   </Link>
-                )
+                );
               })}
             </div>
           )}
         </div>
-      )
+      );
     }
 
     return (
@@ -150,8 +153,8 @@ export function Sidebar({ className }: SidebarProps) {
           {item.title}
         </Button>
       </Link>
-    )
-  }
+    );
+  };
 
   return (
     <motion.div
@@ -179,5 +182,5 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
       </div>
     </motion.div>
-  )
+  );
 }
