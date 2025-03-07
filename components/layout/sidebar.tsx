@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LayoutDashboard,
   Users,
@@ -12,11 +12,11 @@ import {
   Bell,
   ChevronDown,
   Shield,
-} from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const sidebarNavItems = [
   {
@@ -48,7 +48,7 @@ const sidebarNavItems = [
     title: "Banner Management",
     href: "/dashboard/banner",
     icon: FileText,
-    permission: "banner-view"
+    permission: "banner-view",
   },
   {
     title: "Chat",
@@ -70,36 +70,32 @@ const sidebarNavItems = [
         href: "/dashboard/roles",
       },
       {
-        title: "Permissions",
-        href: "/dashboard/permissions",
-      },
-      {
         title: "Role Assignment",
         href: "/dashboard/role-assignment",
-        permission: "role-assign"
+        permission: "role-assign",
       },
     ],
   },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
-]
+  // {
+  //   title: "Settings",
+  //   href: "/dashboard/settings",
+  //   icon: Settings,
+  // },
+];
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar({ className }: SidebarProps) {
-  const pathname = usePathname()
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const pathname = usePathname();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const toggleExpand = (title: string) => {
     setExpandedItems((prev) =>
       prev.includes(title)
         ? prev.filter((item) => item !== title)
         : [...prev, title]
-    )
-  }
+    );
+  };
 
   return (
     <motion.div
@@ -136,7 +132,9 @@ export function Sidebar({ className }: SidebarProps) {
                         </span>
                         <motion.div
                           animate={{
-                            rotate: expandedItems.includes(item.title) ? 180 : 0,
+                            rotate: expandedItems.includes(item.title)
+                              ? 180
+                              : 0,
                           }}
                         >
                           <ChevronDown className="h-4 w-4" />
@@ -187,5 +185,5 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
       </div>
     </motion.div>
-  )
+  );
 }
