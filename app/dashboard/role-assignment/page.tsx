@@ -30,6 +30,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion } from "framer-motion"
 import axiosInstance  from "@/lib/axios"
+import { usePermission } from "@/hooks/usePermission"
+import { useRouter } from "next/navigation"
 
 interface User {
   id: string;
@@ -45,6 +47,8 @@ interface Role {
 }
 
 export default function RoleAssignmentPage() {
+  const { can } = usePermission()
+  const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -66,6 +70,16 @@ export default function RoleAssignmentPage() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!can('role-assign')) {
+      router.push('/dashboard')
+    }
+  }, [can, router])
+
+  if (!can('role-assign')) {
+    return null
+  }
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
 import axiosInstance from "@/lib/axios";
 import {
@@ -33,6 +33,8 @@ import {
 import { User } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
 import useDropdownData from "@/hooks/useDropdownData";
+import { usePermission } from "@/hooks/usePermission";
+import { useRouter } from "next/navigation";
 
 //const roles = ["super-admin"]; //fectch later
 const fetchFnc = () =>
@@ -41,6 +43,8 @@ const fetchFnc = () =>
     .then((res) => res.data.data.adminUsers);
 
 export default function AdminPage() {
+  const { can, hasAny } = usePermission();
+  const router = useRouter();
   const {
     data: users = [],
     error,
@@ -64,6 +68,18 @@ export default function AdminPage() {
   });
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
+
+  // Check for view permission
+  useEffect(() => {
+    if (!can('admin_user-view')) {
+      router.push('/dashboard');
+    }
+  }, [can, router]);
+
+  // Don't render anything if no view permission
+  if (!can('admin_user-view')) {
+    return null;
+  }
 
   const filteredUsers = users.filter(
     (user) =>
@@ -135,16 +151,22 @@ export default function AdminPage() {
       }
     }
   };
+
+  // Check if user has any action permissions
+  const hasActionPermissions = hasAny(['admin_user-update', 'admin_user-delete']);
+
   if (isLoading) <div>Loading</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Admin Users</h2>
-        <Button onClick={handleAddUser}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+        {can('admin_user-create') && (
+          <Button onClick={handleAddUser}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center space-x-2">
@@ -164,7 +186,9 @@ export default function AdminPage() {
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
               {/* <TableHead>Status</TableHead> */}
-              <TableHead className="text-right">Actions</TableHead>
+              {hasActionPermissions && (
+                <TableHead className="text-right">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -204,22 +228,28 @@ export default function AdminPage() {
                     {user.status}
                   </div>
                 </TableCell> */}
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEditUser(user)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteUser(user.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+                {hasActionPermissions && (
+                  <TableCell className="text-right">
+                    {can('admin_user-update') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can('admin_user-delete') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
