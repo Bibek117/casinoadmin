@@ -32,6 +32,7 @@ const sidebarNavItems = [
   {
     title: "Users Management",
     icon: Users,
+    permission: "admin_user-view",
     subItems: [
       {
         title: "Admins",
@@ -44,9 +45,10 @@ const sidebarNavItems = [
     ],
   },
   {
-    title: "Content",
-    href: "/dashboard/content",
+    title: "Banner Management",
+    href: "/dashboard/banner",
     icon: FileText,
+    permission: "banner-view"
   },
   {
     title: "Chat",
@@ -56,6 +58,7 @@ const sidebarNavItems = [
   {
     title: "Roles & Permissions",
     icon: Shield,
+    permission: "role-view",
     subItems: [
       {
         title: "Role Management",
@@ -68,6 +71,7 @@ const sidebarNavItems = [
       {
         title: "Role Assignment",
         href: "/dashboard/role-assignment",
+        permission: "role-assign"
       },
     ],
   },
