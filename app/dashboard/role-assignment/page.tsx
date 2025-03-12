@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Card,
   CardContent,
@@ -29,39 +29,84 @@ import {
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion } from "framer-motion"
+import axiosInstance  from "@/lib/axios"
+import { usePermission } from "@/hooks/usePermission"
+import { useRouter } from "next/navigation"
 
-// Mock data
-const users = [
-  {
-    id: "1",
-    name: "Sarah Davis",
-    email: "sarah.davis@email.com",
-    role: "Admin",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces"
-  },
-  {
-    id: "2",
-    name: "Jackson Miller",
-    email: "jackson.m@email.com",
-    role: "Editor",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=64&h=64&fit=crop&crop=faces"
-  }
-]
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  roles: { name: string }[];
+  avatar?: string;
+}
 
-const roles = [
-  { id: "1", name: "Admin", description: "Full access to all features" },
-  { id: "2", name: "Editor", description: "Can edit and publish content" },
-  { id: "3", name: "Viewer", description: "Can only view content" }
-]
+interface Role {
+  id: string;
+  name: string;
+}
 
 export default function RoleAssignmentPage() {
+  const { can } = usePermission()
+  const router = useRouter()
+  const [users, setUsers] = useState<User[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedRole, setSelectedRole] = useState("")
+  const [selectedRoles, setSelectedRoles] = useState<{ [key: string]: string }>({})
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [usersResponse, rolesResponse] = await Promise.all([
+          axiosInstance.get('/api/admin/users/admins'),
+          axiosInstance.get('/api/admin/dropdowns/roles')
+        ]);
+        
+        setUsers(usersResponse.data.data.adminUsers || []);
+        setRoles(rolesResponse.data.data || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (!can('role-assign')) {
+      router.push('/dashboard')
+    }
+  }, [can, router])
+
+  if (!can('role-assign')) {
+    return null
+  }
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const handleRoleUpdate = async (userId: string) => {
+    try {
+      const newRole = selectedRoles[userId];
+      if (!newRole) return;
+
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      await axiosInstance.patch(`/api/admin/users/${userId}`, {
+        name: user.name,
+        email: user.email,
+        role_name: newRole
+      });
+      
+      // Refresh the users list
+      const response = await axiosInstance.get('/api/admin/users/admins');
+      setUsers(response.data.data.adminUsers || []);
+    } catch (error) {
+      console.error('Error updating role:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -93,22 +138,6 @@ export default function RoleAssignmentPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="role">Filter by Role</Label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="test">All Roles</SelectItem>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.name}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
@@ -142,9 +171,9 @@ export default function RoleAssignmentPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{user.role}</TableCell>
+                    <TableCell>{user.roles[0]?.name || 'No Role'}</TableCell>
                     <TableCell>
-                      <Select>
+                      <Select onValueChange={(value) => setSelectedRoles(prev => ({ ...prev, [user.id]: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select new role" />
                         </SelectTrigger>
@@ -158,7 +187,11 @@ export default function RoleAssignmentPage() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleRoleUpdate(user.id)}
+                      >
                         Update Role
                       </Button>
                     </TableCell>
