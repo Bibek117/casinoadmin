@@ -32,6 +32,7 @@ import { motion } from "framer-motion"
 import axiosInstance  from "@/lib/axios"
 import { usePermission } from "@/hooks/usePermission"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/AuthProvider"
 
 interface User {
   id: string;
@@ -48,6 +49,7 @@ interface Role {
 
 export default function RoleAssignmentPage() {
   const { can } = usePermission()
+  const { refetchPermissions } = useAuth()
   const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
@@ -99,6 +101,12 @@ export default function RoleAssignmentPage() {
         email: user.email,
         role_name: newRole
       });
+      
+      // Refresh permissions if the updated user is the current user
+      const currentUser = await axiosInstance.get('/api/user');
+      if (currentUser.data.id === userId) {
+        await refetchPermissions();
+      }
       
       // Refresh the users list
       const response = await axiosInstance.get('/api/admin/users/admins');
