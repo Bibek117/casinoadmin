@@ -55,9 +55,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string;
     password: string;
   }): Promise<void> => {
-    await csrf();
     try {
+      // Get CSRF token and wait for it to complete
+      await csrf();
+      
+      // Add a small delay to ensure cookie is set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Proceed with login
       await axiosInstance.post("/login", credentials);
+      
+      // Fetch user data and permissions in parallel
       const [userData, permissionsData] = await Promise.all([
         axiosInstance.get("api/user"),
         axiosInstance.get("api/admin/users/permissions")
