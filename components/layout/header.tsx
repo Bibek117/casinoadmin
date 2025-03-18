@@ -1,6 +1,6 @@
 "use client"
 
-import { MoonIcon, SunIcon, BellIcon, UserCircle } from "lucide-react"
+import { MoonIcon, SunIcon, BellIcon, UserCircle, Menu } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,8 +14,15 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/context/AuthProvider"
+import { cn } from "@/lib/utils"
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick: () => void;
+  isSidebarOpen?: boolean;
+  className?: string;
+}
+
+export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
   const {logout} = useAuth();
   const { setTheme } = useTheme()
   const [notifications, setNotifications] = useState([
@@ -25,8 +32,18 @@ export function Header() {
   ])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={cn("sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60", className)}>
       <div className="container flex h-14 items-center">
+        {/* Hamburger Menu */}
+        <button 
+          className="p-2 md:hidden" 
+          onClick={onMenuClick}
+          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+
+        {/* Right-side items */}
         <div className="flex flex-1 items-center justify-end space-x-4">
           {/* Notifications */}
           <DropdownMenu>
