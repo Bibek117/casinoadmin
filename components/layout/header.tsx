@@ -1,28 +1,31 @@
-"use client"
+"use client";
 
-import { MoonIcon, SunIcon, BellIcon, UserCircle } from "lucide-react"
-import { useTheme } from "next-themes"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation";
+import { MoonIcon, SunIcon, BellIcon, UserCircle } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { motion, AnimatePresence } from "framer-motion"
-import { useAuth } from "@/context/AuthProvider"
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/AuthProvider";
 
 export function Header() {
-  const {logout} = useAuth();
-  const { setTheme } = useTheme()
+  const { user, logout } = useAuth(); // Get user data
+  const { setTheme } = useTheme();
+  const router = useRouter(); // Initialize Next.js router
+
   const [notifications, setNotifications] = useState([
     { id: 1, message: "New user registered", time: "5m ago" },
     { id: 2, message: "Server update completed", time: "10m ago" },
     { id: 3, message: "New order received", time: "15m ago" },
-  ])
+  ]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -96,7 +99,6 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -104,7 +106,16 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Profile</DropdownMenuItem>
+              <div className="px-4 py-2 text-sm font-semibold">
+                Hello, {user?.name} {/* Show User Name */}
+              </div>
+              <div className="px-4 pb-2 text-xs text-muted-foreground">
+                {user?.role?.toUpperCase()} {/* Show User Role */}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+                Profile
+              </DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
@@ -113,5 +124,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }

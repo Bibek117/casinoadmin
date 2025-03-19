@@ -8,7 +8,14 @@ import {
 } from "react";
 import axiosInstance from "@/lib/axios";
 
-type User = Record<string, unknown>;
+// type User = Record<string, unknown>;
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  role: "admin" | "superadmin" | "developer"; // Add roles
+};
+
 
 interface AuthContextType {
   user: User | null;
