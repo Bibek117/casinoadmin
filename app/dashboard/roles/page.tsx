@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { motion } from "framer-motion"
 import { Shield, Trash2, Edit } from "lucide-react"
 import axiosInstance from "@/lib/axios"
+import { usePermission } from "@/hooks/usePermission"
+import { useRouter } from "next/navigation"
 
 interface Permission {
   id: string;
@@ -36,6 +38,8 @@ interface PermissionGroup {
 }
 
 export default function RolesPage() {
+  const { can } = usePermission()
+  const router = useRouter()
   const [roles, setRoles] = useState<Role[]>([])
   const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([])
   const [activeTab, setActiveTab] = useState("list")
@@ -43,6 +47,12 @@ export default function RolesPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!can('role-view')) {
+      router.push('/dashboard')
+    }
+  }, [can, router])
 
   useEffect(() => {
     fetchRoles()
@@ -173,6 +183,10 @@ export default function RolesPage() {
     return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
   };
 
+  if (!can('role-view')) {
+    return null
+  }
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="list" value={activeTab} onValueChange={setActiveTab}>
@@ -180,7 +194,9 @@ export default function RolesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Role Management</h2>
           <TabsList>
             <TabsTrigger value="list">View Roles</TabsTrigger>
-            <TabsTrigger value="create">Create Role</TabsTrigger>
+            {can('role-create') && (
+              <TabsTrigger value="create">Create Role</TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -196,20 +212,24 @@ export default function RolesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditClick(role.id)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteRole(role.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {can('role-update') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditClick(role.id)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {can('role-delete') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteRole(role.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -217,80 +237,82 @@ export default function RolesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="create" className="mt-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>{isEditing ? 'Edit Role' : 'Create New Role'}</CardTitle>
-                <CardDescription>
-                  {isEditing ? 'Modify role and permissions' : 'Define a new role and assign permissions'}
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Role Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter role name"
-                      value={roleName}
-                      onChange={(e) => setRoleName(e.target.value)}
-                      disabled={isEditing}
-                    />
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <Label className="text-lg">Permissions</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {groupPermissions(availablePermissions).map((group) => (
-                        <div key={group.name} className="border rounded-lg p-4">
-                          <h3 className="font-medium text-sm text-muted-foreground mb-3">{group.name}</h3>
-                          <div className="grid grid-cols-2 gap-2">
-                            {group.permissions.map((permission) => {
-                              const [groupName, action] = permission.name.split('-');
-                              const viewPermission = `${groupName}-view`;
-                              const isDisabled = action !== 'view' && !selectedPermissions.includes(viewPermission);
-
-                              return (
-                                <div
-                                  key={permission.id}
-                                  className="flex items-center space-x-2"
-                                >
-                                  <Checkbox
-                                    id={permission.name}
-                                    checked={selectedPermissions.includes(permission.name)}
-                                    onCheckedChange={() => handlePermissionToggle(permission)}
-                                    disabled={isDisabled}
-                                  />
-                                  <Label 
-                                    htmlFor={permission.name} 
-                                    className={`text-sm ${isDisabled ? 'text-muted-foreground' : ''}`}
-                                  >
-                                    {action}
-                                  </Label>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+        {can('role-create') && (
+          <TabsContent value="create" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>{isEditing ? 'Edit Role' : 'Create New Role'}</CardTitle>
+                  <CardDescription>
+                    {isEditing ? 'Modify role and permissions' : 'Define a new role and assign permissions'}
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleSubmit}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Role Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="Enter role name"
+                        value={roleName}
+                        onChange={(e) => setRoleName(e.target.value)}
+                        disabled={isEditing}
+                      />
                     </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="w-full">
-                    <Shield className="mr-2 h-4 w-4" />
-                    {isEditing ? 'Update Role' : 'Create Role'}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
-          </motion.div>
-        </TabsContent>
+                    
+                    <div className="space-y-4">
+                      <Label className="text-lg">Permissions</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {groupPermissions(availablePermissions).map((group) => (
+                          <div key={group.name} className="border rounded-lg p-4">
+                            <h3 className="font-medium text-sm text-muted-foreground mb-3">{group.name}</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                              {group.permissions.map((permission) => {
+                                const [groupName, action] = permission.name.split('-');
+                                const viewPermission = `${groupName}-view`;
+                                const isDisabled = action !== 'view' && !selectedPermissions.includes(viewPermission);
+
+                                return (
+                                  <div
+                                    key={permission.id}
+                                    className="flex items-center space-x-2"
+                                  >
+                                    <Checkbox
+                                      id={permission.name}
+                                      checked={selectedPermissions.includes(permission.name)}
+                                      onCheckedChange={() => handlePermissionToggle(permission)}
+                                      disabled={isDisabled}
+                                    />
+                                    <Label 
+                                      htmlFor={permission.name} 
+                                      className={`text-sm ${isDisabled ? 'text-muted-foreground' : ''}`}
+                                    >
+                                      {action}
+                                    </Label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="submit" className="w-full">
+                      <Shield className="mr-2 h-4 w-4" />
+                      {isEditing ? 'Update Role' : 'Create Role'}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )
