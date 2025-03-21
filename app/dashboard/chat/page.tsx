@@ -8,8 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Search, Paperclip, X } from "lucide-react";
 import axiosInstance from "@/lib/axios";
+import useEcho from "@/hooks/echo";
 
 export default function ChatPage() {
+  const echo = useEcho();
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -22,6 +24,20 @@ export default function ChatPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (echo && selectedChat) {
+      const channel = echo.private(`chat.messages.${selectedChat.id}`);
+      channel.listen("MessageSent", (e) => {
+        //console.log(e);
+        setMessages((prevMessages) => [...prevMessages, e.message]);
+      });
+
+      return () => {
+        channel.stopListening("MessageSent");
+      };
+    }
+  }, [echo, selectedChat]);
 
   useEffect(() => {
     scrollToBottom();
@@ -102,7 +118,7 @@ export default function ChatPage() {
         }
       );
 
-      setMessages([...messages, res.data.data]);
+      //setMessages([...messages, res.data.data]);
       setNewMessage("");
       setAttachments([]);
       setAttachmentPreviews([]);
