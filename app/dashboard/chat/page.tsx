@@ -6,130 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Search } from "lucide-react";
+import { Send, Search, Paperclip, X } from "lucide-react";
 import axiosInstance from "@/lib/axios";
-
-// Mock data - replace with actual API calls
-const initialChats = [
-  {
-    id: "1",
-    name: "Sarah Davis",
-    avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces",
-    lastMessage: "Hey, how are you?",
-    unread: 2,
-    online: true,
-  },
-  {
-    id: "2",
-    name: "Jackson Miller",
-    avatar:
-      "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=64&h=64&fit=crop&crop=faces",
-    lastMessage: "The new update looks great!",
-    unread: 0,
-    online: false,
-  },
-  {
-    id: "3",
-    name: "Amelia Johnson",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=faces",
-    lastMessage: "Can you help me with something?",
-    unread: 1,
-    online: true,
-  },
-  {
-    id: "4",
-    name: "Sarah Davis",
-    avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces",
-    lastMessage: "Hey, how are you?",
-    unread: 2,
-    online: true,
-  },
-  {
-    id: "5",
-    name: "Jackson Miller",
-    avatar:
-      "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=64&h=64&fit=crop&crop=faces",
-    lastMessage: "The new update looks great!",
-    unread: 0,
-    online: false,
-  },
-  {
-    id: "6",
-    name: "Amelia Johnson",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=faces",
-    lastMessage: "Can you help me with something?",
-    unread: 1,
-    online: true,
-  },
-];
-
-const initialMessages = [
-  {
-    id: "1",
-    senderId: "1",
-    text: "Hey, how are you?",
-    timestamp: "2024-03-15T10:00:00",
-  },
-  {
-    id: "2",
-    senderId: "current-user",
-    text: "I'm good, thanks! How about you?",
-    timestamp: "2024-03-15T10:01:00",
-  },
-  {
-    id: "3",
-    senderId: "1",
-    text: "I'm doing great! Just wanted to check in about the recent updates.",
-    timestamp: "2024-03-15T10:02:00",
-  },
-  {
-    id: "4",
-    senderId: "1",
-    text: "Hey, how are you?",
-    timestamp: "2024-03-15T10:00:00",
-  },
-  {
-    id: "5",
-    senderId: "current-user",
-    text: "I'm good, thanks! How about you?",
-    timestamp: "2024-03-15T10:01:00",
-  },
-  {
-    id: "6",
-    senderId: "1",
-    text: "I'm doing great! Just wanted to check in about the recent updates.",
-    timestamp: "2024-03-15T10:02:00",
-  },
-  {
-    id: "7",
-    senderId: "1",
-    text: "Hey, how are you?",
-    timestamp: "2024-03-15T10:00:00",
-  },
-  {
-    id: "8",
-    senderId: "current-user",
-    text: "I'm good, thanks! How about you?",
-    timestamp: "2024-03-15T10:01:00",
-  },
-  {
-    id: "9",
-    senderId: "1",
-    text: "I'm doing great! Just wanted to check in about the recent updates.",
-    timestamp: "2024-03-15T10:02:00",
-  },
-];
 
 export default function ChatPage() {
   const [chats, setChats] = useState([]);
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedChat, setSelectedChat] = useState(initialChats[0]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -141,16 +28,36 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    fetchChat();
+    fetchChats();
   }, []);
 
-  const fetchChat = async () => {
+  useEffect(() => {
+    if (selectedChat) {
+      fetchMessages(selectedChat.id);
+    }
+  }, [selectedChat]);
+
+  useEffect(() => {
+    if (chats.length > 0 && !selectedChat) {
+      setSelectedChat(chats[0]);
+    }
+  }, [chats]);
+
+  const fetchChats = async () => {
     try {
       const res = await axiosInstance.get("api/chats");
       setChats(res.data);
-      console.log(res.data);
     } catch (error) {
-      console.log(error);
+      console.error("Failed to fetch chats:", error);
+    }
+  };
+
+  const fetchMessages = async (chatId) => {
+    try {
+      const res = await axiosInstance.get(`api/messages/${chatId}`);
+      setMessages(res.data);
+    } catch (error) {
+      console.error("Failed to fetch messages:", error);
     }
   };
 
@@ -158,26 +65,50 @@ export default function ChatPage() {
     chat.client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newAttachments = Array.from(files);
+      setAttachments((prev) => [...prev, ...newAttachments]);
 
-    const message = {
-      id: String(messages.length + 1),
-      senderId: "current-user",
-      text: newMessage,
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages([...messages, message]);
-    setNewMessage("");
+      const newPreviews = newAttachments.map((file) =>
+        URL.createObjectURL(file)
+      );
+      setAttachmentPreviews((prev) => [...prev, ...newPreviews]);
+    }
   };
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+    setAttachmentPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // if (!newMessage.trim() && attachments.length === 0) return;
+
+    const formData = new FormData();
+    formData.append("message", newMessage);
+    attachments.forEach((file) => formData.append("attachments[]", file));
+
+    try {
+      const res = await axiosInstance.post(
+        `api/messages/${selectedChat.id}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setMessages([...messages, res.data.data]);
+      setNewMessage("");
+      setAttachments([]);
+      setAttachmentPreviews([]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
   };
 
   return (
@@ -201,7 +132,7 @@ export default function ChatPage() {
               <div
                 key={chat.id}
                 className={`flex items-center space-x-4 p-2 rounded-lg cursor-pointer hover:bg-accent ${
-                  selectedChat.id === chat.id ? "bg-accent" : ""
+                  selectedChat?.id === chat.id ? "bg-accent" : ""
                 }`}
                 onClick={() => setSelectedChat(chat)}
               >
@@ -220,10 +151,6 @@ export default function ChatPage() {
                       {chat.unread_count}
                     </span>
                   )}
-                  {/* TODO: add online or not functionlaity */}
-                  {/* {chat.online && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
-                  )} */}
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -232,7 +159,7 @@ export default function ChatPage() {
                   </div>
                   {!chat.messages[0].message_by_admin &&
                   !chat.messages[0].is_read ? (
-                    <p className="text-bold text-white truncate">
+                    <p className="text-bold text-neutral-400 truncat">
                       {chat.messages[0].message}
                     </p>
                   ) : (
@@ -255,18 +182,18 @@ export default function ChatPage() {
         <div className="p-4 border-b">
           <div className="flex items-center space-x-4">
             <Avatar>
-              <AvatarImage src={selectedChat.avatar} />
+              <AvatarImage src={selectedChat?.client.avatar} />
               <AvatarFallback>
-                {selectedChat.name
+                {selectedChat?.client.name
                   .split(" ")
                   .map((n) => n[0])
                   .join("")}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{selectedChat.name}</p>
+              <p className="font-medium">{selectedChat?.client.name}</p>
               <p className="text-sm text-muted-foreground">
-                {selectedChat.online ? "Online" : "Offline"}
+                {selectedChat?.online ? "Online" : "Offline"}
               </p>
             </div>
           </div>
@@ -278,27 +205,57 @@ export default function ChatPage() {
               <div
                 key={message.id}
                 className={`flex ${
-                  message.senderId === "current-user"
-                    ? "justify-end"
-                    : "justify-start"
+                  message.sender_id === selectedChat.client_id
+                    ? "justify-start"
+                    : "justify-end"
                 }`}
               >
                 <div
                   className={`max-w-[70%] rounded-lg p-3 ${
-                    message.senderId === "current-user"
+                    message.sender_id === selectedChat.client_id
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
                   }`}
                 >
-                  <p>{message.text}</p>
+                  <p>{message?.message}</p>
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {message.attachments.map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="flex items-center space-x-2"
+                        >
+                          <a
+                            href={attachment.file_path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-500 hover:underline"
+                          >
+                            {attachment.file_name}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <p
                     className={`text-xs mt-1 ${
-                      message.senderId === "current-user"
+                      message.sender_id === selectedChat.client_id
                         ? "text-primary-foreground/70"
                         : "text-muted-foreground"
                     }`}
                   >
-                    {formatTime(message.timestamp)}
+                    {message.sender_id !== selectedChat.client_id && (
+                      <span className="text-sm text-gray-400">
+                        {message.sender.name}
+                      </span>
+                    )}
+
+                    <span className="text-xs text-gray-500">
+                      {new Date(message.created_at).toLocaleTimeString()}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {message.time_ago}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -309,6 +266,16 @@ export default function ChatPage() {
 
         <form onSubmit={handleSendMessage} className="p-4 border-t">
           <div className="flex space-x-2">
+            <label htmlFor="file-input" className="cursor-pointer">
+              <Paperclip className="h-6 w-6 mt-2 text-muted-foreground" />
+              <input
+                id="file-input"
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -319,6 +286,40 @@ export default function ChatPage() {
               <Send className="h-4 w-4" />
             </Button>
           </div>
+          {attachmentPreviews.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {attachmentPreviews.map((preview, index) => {
+                const file = attachments[index];
+                const isImage = file.type.startsWith("image/");
+
+                return (
+                  <div key={index} className="relative">
+                    {isImage ? (
+                      <img
+                        src={preview}
+                        alt={`Attachment ${index}`}
+                        className="h-16 w-16 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 flex flex-col items-center justify-center bg-gray-100 rounded-lg border border-gray-200">
+                        <Paperclip className="h-6 w-6 text-gray-500" />
+                        <p className="text-xs text-gray-700 truncate w-full px-1 text-center">
+                          {file.name}
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </form>
       </Card>
     </div>
