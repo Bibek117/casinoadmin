@@ -9,15 +9,62 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Search, Paperclip, X } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import useEcho from "@/hooks/echo";
-import { preconnect } from "react-dom";
+
+interface Client {
+  id: number;
+  name: string;
+  last_seen_at: string | null;
+  avatar: string;
+  email?: string;
+  is_superadmin?: number;
+  is_admin?: number;
+  online_status?: boolean;
+  is_active?: number;
+  email_verified_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Message {
+  id: number;
+  chat_id: number;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  sender_id: number;
+  time_ago: string;
+  message_by_admin: number;
+  sender: Client;
+  attachments?: Attachment[]; // Optional if attachments exist
+}
+
+interface Chat {
+  id: number;
+  client_id: number;
+  is_active: boolean;
+  last_message_at: string;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  unread_count: number;
+  client: Client;
+  messages: Message[];
+}
+
+interface Attachment {
+  id: number;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+}
 
 export default function ChatPage() {
   const echo = useEcho();
-  const [chats, setChats] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,23 +79,11 @@ export default function ChatPage() {
       });
 
       channels.forEach((channel) => {
-        channel.listen("MessageSent", (e) => {
+        channel.listen("MessageSent", (e: { message: Message }) => {
           if (e.message.chat_id === selectedChat?.id) {
             setMessages((prevMessages) => [...prevMessages, e.message]);
             axiosInstance.patch(`api/messages/markAsRead/${e.message.id}`);
           }
-          // setChats((prevChats) =>
-          //   prevChats.map((chat) =>
-          //     chat.id === e.message.chat_id &&
-          //     e.message.sender_id == chat.client_id
-          //       ? {
-          //           ...chat,
-          //           unread_count: chat.unread_count + 1,
-          //           messages: [e.message],
-          //         }
-          //       : chat
-          //   )
-          // );
           setChats((prevChats) =>
             prevChats.map((chat) => {
               if (
@@ -117,7 +152,7 @@ export default function ChatPage() {
     }
   };
 
-  const fetchMessages = async (chatId) => {
+  const fetchMessages = async (chatId: number) => {
     try {
       const res = await axiosInstance.patch(`api/messages/${chatId}`);
       setMessages(res.data);
@@ -158,7 +193,7 @@ export default function ChatPage() {
 
     try {
       const res = await axiosInstance.post(
-        `api/messages/${selectedChat.id}`,
+        `api/messages/${selectedChat?.id}`,
         formData,
         {
           headers: {
@@ -260,7 +295,7 @@ export default function ChatPage() {
                 <div>
                   <p className="font-medium">{selectedChat?.client.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedChat?.online ? "Online" : "Offline"}
+                    {selectedChat?.client.online_status ? "Online" : "Offline"}
                   </p>
                 </div>
               </div>
