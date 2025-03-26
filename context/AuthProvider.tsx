@@ -8,21 +8,15 @@ import {
 } from "react";
 import axiosInstance from "@/lib/axios";
 
-// type User = Record<string, unknown>;
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: "admin" | "superadmin" | "developer"; // Add roles
-};
-
-
+type User = Record<string, unknown>;
+ 
 interface AuthContextType {
   user: User | null;
   permissions: string[];
   loading: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
+  refetchPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,12 +97,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refetchPermissions = async (): Promise<void> => {
+    try {
+      const permissionsData = await axiosInstance.get("api/admin/users/permissions");
+      setPermissions(permissionsData.data.permissions);
+      localStorage.setItem("permissions", JSON.stringify(permissionsData.data.permissions));
+    } catch (error) {
+      console.error("Failed to refetch permissions:", error);
+    }
+  };
+
   const contextValue: AuthContextType = {
     user,
     permissions,
     loading,
     login,
     logout,
+    refetchPermissions,
   };
 
   return (

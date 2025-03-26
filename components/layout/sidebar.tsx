@@ -77,16 +77,19 @@ const sidebarNavItems = [
       },
     ],
   },
-  // {
-  //   title: "Settings",
-  //   href: "/dashboard/settings",
-  //   icon: Settings,
-  // },
+  {
+    title: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+  },
 ];
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface SidebarProps {
+  className?: string;
+  onNavigate?: () => void;
+}
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { can } = usePermission();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
@@ -125,11 +128,13 @@ export function Sidebar({ className }: SidebarProps) {
                   return null;
                 }
                 return (
-                  <Link key={subItem.href} href={subItem.href}>
+                  <Link 
+                    key={subItem.href} 
+                    href={subItem.href}
+                    onClick={onNavigate}
+                  >
                     <Button
-                      variant={
-                        pathname === subItem.href ? "secondary" : "ghost"
-                      }
+                      variant={pathname === subItem.href ? "secondary" : "ghost"}
                       className="w-full justify-start"
                     >
                       {subItem.title}
@@ -144,7 +149,11 @@ export function Sidebar({ className }: SidebarProps) {
     }
 
     return (
-      <Link key={item.title} href={item.href!}>
+      <Link 
+        key={item.title} 
+        href={item.href!}
+        onClick={onNavigate}
+      >
         <Button
           variant={pathname === item.href ? "secondary" : "ghost"}
           className="w-full justify-start"
@@ -160,7 +169,7 @@ export function Sidebar({ className }: SidebarProps) {
     <motion.div
       initial={{ x: -250 }}
       animate={{ x: 0 }}
-      className={cn("pb-12 min-h-screen", className)}
+      className={cn("pb-12 min-h-screen bg-background", className)}
     >
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
