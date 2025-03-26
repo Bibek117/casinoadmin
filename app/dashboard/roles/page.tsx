@@ -19,6 +19,7 @@ import { Shield, Trash2, Edit } from "lucide-react"
 import axiosInstance from "@/lib/axios"
 import { usePermission } from "@/hooks/usePermission"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/AuthProvider"
 
 interface Permission {
   id: string;
@@ -39,6 +40,7 @@ interface PermissionGroup {
 
 export default function RolesPage() {
   const { can } = usePermission()
+  const { refetchPermissions } = useAuth()
   const router = useRouter()
   const [roles, setRoles] = useState<Role[]>([])
   const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([])
@@ -116,6 +118,7 @@ export default function RolesPage() {
           role_id: editingId,
           permissions: selectedPermissions
         })
+        await refetchPermissions()
       } else {
         await axiosInstance.post(`/api/admin/roles/create`, {
           name: roleName,
@@ -138,6 +141,7 @@ export default function RolesPage() {
       await axiosInstance.delete(`/api/admin/roles/delete`, {
         data: { role_id: id }
       })
+      await refetchPermissions()
       setRoles(prevRoles => prevRoles.filter(role => role.id !== id))
     } catch (error) {
       console.error('Error deleting role:', error)
