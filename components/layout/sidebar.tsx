@@ -77,11 +77,6 @@ const sidebarNavItems = [
       },
     ],
   },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
 ];
 
 interface SidebarProps {
