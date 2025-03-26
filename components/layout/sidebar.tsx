@@ -77,11 +77,11 @@ const sidebarNavItems = [
       },
     ],
   },
-  // {
-  //   title: "Settings",
-  //   href: "/dashboard/settings",
-  //   icon: Settings,
-  // },
+  {
+    title: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+  },
 ];
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
