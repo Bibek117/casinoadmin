@@ -140,7 +140,6 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
               >
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
