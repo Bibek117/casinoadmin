@@ -123,13 +123,15 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                   return null;
                 }
                 return (
-                  <Link 
-                    key={subItem.href} 
+                  <Link
+                    key={subItem.href}
                     href={subItem.href}
                     onClick={onNavigate}
                   >
                     <Button
-                      variant={pathname === subItem.href ? "secondary" : "ghost"}
+                      variant={
+                        pathname === subItem.href ? "secondary" : "ghost"
+                      }
                       className="w-full justify-start"
                     >
                       {subItem.title}
@@ -144,11 +146,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
     }
 
     return (
-      <Link 
-        key={item.title} 
-        href={item.href!}
-        onClick={onNavigate}
-      >
+      <Link key={item.title} href={item.href!} onClick={onNavigate}>
         <Button
           variant={pathname === item.href ? "secondary" : "ghost"}
           className="w-full justify-start"
@@ -169,15 +167,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <h2 className="mb-2 px-4 text-lg font-semibold">Admin Dashboard</h2>
-          <div className="space-y-1">
-            <Button variant="secondary" className="w-full justify-start">
-              <Bell className="mr-2 h-4 w-4" />
-              Notifications
-            </Button>
-          </div>
         </div>
         <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-lg font-semibold">Navigation</h2>
+          <h2 className="mb-2 px-4 text-lg font-semibold">Menu</h2>
           <ScrollArea className="h-[calc(100vh-200px)] px-1">
             <div className="space-y-1">
               {sidebarNavItems.map(renderNavItem)}

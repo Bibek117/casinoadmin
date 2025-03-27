@@ -36,7 +36,6 @@ import useDropdownData from "@/hooks/useDropdownData";
 import { usePermission } from "@/hooks/usePermission";
 import { useRouter } from "next/navigation";
 
-//const roles = ["super-admin"]; //fectch later
 const fetchFnc = () =>
   axiosInstance
     .get("api/admin/users/admins")
@@ -71,13 +70,13 @@ export default function AdminPage() {
 
   // Check for view permission
   useEffect(() => {
-    if (!can('admin_user-view')) {
-      router.push('/dashboard');
+    if (!can("admin_user-view")) {
+      router.push("/dashboard");
     }
   }, [can, router]);
 
   // Don't render anything if no view permission
-  if (!can('admin_user-view')) {
+  if (!can("admin_user-view")) {
     return null;
   }
 
@@ -153,7 +152,10 @@ export default function AdminPage() {
   };
 
   // Check if user has any action permissions
-  const hasActionPermissions = hasAny(['admin_user-update', 'admin_user-delete']);
+  const hasActionPermissions = hasAny([
+    "admin_user-update",
+    "admin_user-delete",
+  ]);
 
   if (isLoading) <div>Loading</div>;
 
@@ -161,7 +163,7 @@ export default function AdminPage() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Admin Users</h2>
-        {can('admin_user-create') && (
+        {can("admin_user-create") && (
           <Button onClick={handleAddUser}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add User
@@ -230,7 +232,7 @@ export default function AdminPage() {
                 </TableCell> */}
                 {hasActionPermissions && (
                   <TableCell className="text-right">
-                    {can('admin_user-update') && (
+                    {can("admin_user-update") && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -239,7 +241,7 @@ export default function AdminPage() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {can('admin_user-delete') && (
+                    {can("admin_user-delete") && (
                       <Button
                         variant="ghost"
                         size="icon"

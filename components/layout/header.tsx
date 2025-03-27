@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthProvider";
 import { cn } from "@/lib/utils";
+import axiosInstance from "@/lib/axios";
+import useSWR from "swr";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -23,16 +25,23 @@ interface HeaderProps {
   className?: string;
 }
 
+const fetchFnc = () =>
+  axiosInstance
+    .get("api/admin/dashboard/notifications")
+    .then((res) => res.data.data);
+
 export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
   const { user, logout } = useAuth(); // Get user data
   const { setTheme } = useTheme();
-  const router = useRouter(); // Initialize Next.js router
-
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: "New user registered", time: "5m ago" },
-    { id: 2, message: "Server update completed", time: "10m ago" },
-    { id: 3, message: "New order received", time: "15m ago" },
-  ]);
+  const router = useRouter();
+  const { data, error, isLoading } = useSWR(
+    "/api/admin/dashboard/notifications",
+    fetchFnc,
+    {
+      revalidateOnFocus: false,
+      refreshInterval: 10000,
+    }
+  );
 
   return (
     <header
@@ -58,9 +67,9 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <BellIcon className="h-[1.2rem] w-[1.2rem]" />
-                {notifications.length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center">
-                    {notifications.length}
+                {data?.totalNotifications > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center bg-red-500 text-white text-xs justify-center">
+                    {data?.totalNotifications}
                   </Badge>
                 )}
               </Button>
@@ -68,18 +77,18 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
             <DropdownMenuContent align="end" className="w-80">
               <div className="flex items-center justify-between px-4 py-2 border-b">
                 <span className="font-semibold">Notifications</span>
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setNotifications([])}
                 >
                   Clear all
-                </Button>
+                </Button> */}
               </div>
               <AnimatePresence>
-                {notifications.map((notification) => (
+                {data?.notifications.map((notification: any, index: number) => (
                   <motion.div
-                    key={notification.id}
+                    key={index}
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -88,9 +97,6 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
                     <DropdownMenuItem className="p-4">
                       <div className="flex flex-col gap-1">
                         <span>{notification.message}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {notification.time}
-                        </span>
                       </div>
                     </DropdownMenuItem>
                   </motion.div>
