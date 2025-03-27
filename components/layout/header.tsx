@@ -15,7 +15,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthProvider";
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -35,11 +35,16 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
   ]);
 
   return (
-    <header className={cn("sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60", className)}>
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        className
+      )}
+    >
       <div className="container flex h-14 items-center">
         {/* Hamburger Menu */}
-        <button 
-          className="p-2 md:hidden" 
+        <button
+          className="p-2 md:hidden"
           onClick={onMenuClick}
           aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
@@ -130,7 +135,9 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
                 {user?.role?.toUpperCase()} {/* Show User Role */}
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/profile")}
+              >
                 Profile
               </DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>

@@ -8,8 +8,8 @@ import {
 } from "react";
 import axiosInstance from "@/lib/axios";
 
-type User = Record<string, unknown>;
- 
+type User = any;
+
 interface AuthContextType {
   user: User | null;
   permissions: string[];
@@ -60,24 +60,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Get CSRF token and wait for it to complete
       await csrf();
-      
+
       // Add a small delay to ensure cookie is set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Proceed with login
       await axiosInstance.post("/login", credentials);
-      
+
       // Fetch user data and permissions in parallel
       const [userData, permissionsData] = await Promise.all([
         axiosInstance.get("api/user"),
-        axiosInstance.get("api/admin/users/permissions")
+        axiosInstance.get("api/admin/users/permissions"),
       ]);
-      
+
       setUser(userData.data);
       setPermissions(permissionsData.data.permissions);
-      
+
       localStorage.setItem("user", JSON.stringify(userData.data));
-      localStorage.setItem("permissions", JSON.stringify(permissionsData.data.permissions));
+      localStorage.setItem(
+        "permissions",
+        JSON.stringify(permissionsData.data.permissions)
+      );
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -100,9 +103,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refetchPermissions = async (): Promise<void> => {
     try {
-      const permissionsData = await axiosInstance.get("api/admin/users/permissions");
+      const permissionsData = await axiosInstance.get(
+        "api/admin/users/permissions"
+      );
       setPermissions(permissionsData.data.permissions);
-      localStorage.setItem("permissions", JSON.stringify(permissionsData.data.permissions));
+      localStorage.setItem(
+        "permissions",
+        JSON.stringify(permissionsData.data.permissions)
+      );
     } catch (error) {
       console.error("Failed to refetch permissions:", error);
     }
