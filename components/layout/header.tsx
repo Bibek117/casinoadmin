@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { MoonIcon, SunIcon, BellIcon, UserCircle, Menu } from "lucide-react";
+import {
+  MoonIcon,
+  SunIcon,
+  BellIcon,
+  UserCircle,
+  Menu,
+  Eye,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +18,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthProvider";
@@ -39,7 +45,7 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
     fetchFnc,
     {
       revalidateOnFocus: false,
-      refreshInterval: 10000,
+      refreshInterval: 20000,
     }
   );
 
@@ -94,10 +100,14 @@ export function Header({ onMenuClick, isSidebarOpen, className }: HeaderProps) {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <DropdownMenuItem className="p-4">
+                    <DropdownMenuItem className="p-4 flex items-center">
                       <div className="flex flex-col gap-1">
                         <span>{notification.message}</span>
                       </div>
+                      <Eye
+                        onClick={() => router.push(notification.url)}
+                        className="ml-auto cursor-pointer"
+                      />
                     </DropdownMenuItem>
                   </motion.div>
                 ))}
