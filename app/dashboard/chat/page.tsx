@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Search, Paperclip, X } from "lucide-react";
+import { Send, Search, Paperclip, X, Menu, ArrowLeft } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import useEcho from "@/hooks/echo";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface Client {
   id: number;
@@ -68,6 +69,19 @@ export default function ChatPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [showChatList, setShowChatList] = useState(true);
+
+  const toggleChatList = () => {
+    setShowChatList(!showChatList);
+  };
+
+  // Close chat list when chat is selected on mobile
+  useEffect(() => {
+    if (isMobile && selectedChat) {
+      setShowChatList(false);
+    }
+  }, [selectedChat, isMobile]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -136,13 +150,6 @@ export default function ChatPage() {
       fetchMessages(selectedChat.id);
     }
   }, [selectedChat]);
-
-  // useEffect(() => {
-  //   if (chats.length > 0 && !selectedChat) {
-  //     setSelectedChat(chats[0]);
-  //   }
-  // }, [chats]);
-
   const fetchChats = async () => {
     try {
       const res = await axiosInstance.get("api/chats");
@@ -201,8 +208,6 @@ export default function ChatPage() {
           },
         }
       );
-
-      //setMessages([...messages, res.data.data]);
       setNewMessage("");
       setAttachments([]);
       setAttachmentPreviews([]);
@@ -212,11 +217,56 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] gap-4">
-      {/* Chat List */}
-      <Card className="w-80 flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex items-center space-x-2">
+    <div className="flex h-[calc(100vh-10rem)] md:h-[calc(100vh-6rem)] gap-4 relative flex-col md:flex-row">
+      {/* Mobile Header */}
+      {isMobile && !showChatList && (
+        <div className="md:hidden flex items-center p-4 border-b w-full bg-background sticky top-0 z-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowChatList(true)}
+            className="mr-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center">
+            <Avatar className="h-8 w-8 mr-2">
+              <AvatarImage src={selectedChat?.client.avatar} />
+              <AvatarFallback>
+                {selectedChat?.client.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{selectedChat?.client.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedChat?.client.is_online ? "Online" : "Offline"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat List - Hidden on mobile when chat is selected */}
+      <Card
+        className={`w-full md:w-80 flex flex-col ${
+          isMobile ? (showChatList ? "absolute inset-0 z-20" : "hidden") : ""
+        }`}
+      >
+        <div className="p-4 border-b flex items-center">
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleChatList}
+              className="mr-2 md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          <div className="flex items-center space-x-2 flex-1">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search chats..."
@@ -282,11 +332,15 @@ export default function ChatPage() {
       </Card>
 
       {/* Chat Messages */}
-      <Card className="flex-1 flex flex-col">
-        {selectedChat ? (
-          <>
-            <div className="p-4 border-b">
-              <div className="flex items-center space-x-4">
+      {(!isMobile || selectedChat) && (
+        <Card
+          className={`flex-1 flex flex-col ${
+            isMobile ? (!showChatList ? "w-full" : "hidden") : ""
+          }`}
+        >
+          {selectedChat ? (
+            <>
+              <div className="p-4 border-b hidden md:flex items-center space-x-4">
                 <Avatar>
                   <AvatarImage src={selectedChat?.client.avatar} />
                   <AvatarFallback>
@@ -303,147 +357,145 @@ export default function ChatPage() {
                   </p>
                 </div>
               </div>
-            </div>
 
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender_id === selectedChat.client_id
-                        ? "justify-start"
-                        : "justify-end"
-                    }`}
-                  >
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {messages.map((message) => (
                     <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
+                      key={message.id}
+                      className={`flex ${
                         message.sender_id === selectedChat.client_id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                          ? "justify-start"
+                          : "justify-end"
                       }`}
                     >
-                      <p>{message?.message}</p>
-                      {message.attachments &&
-                        message.attachments.length > 0 && (
-                          <div className="mt-2 space-y-2">
-                            {message.attachments.map((attachment) => (
-                              <div
-                                key={attachment.id}
-                                className="flex items-center space-x-2"
-                              >
-                                {attachment.file_type.includes("image") ? (
-                                  <img
-                                    src={attachment.file_url}
-                                    alt={attachment.file_name}
-                                    className="max-w-full h-auto rounded-lg"
-                                  />
-                                ) : (
-                                  <a
-                                    href={attachment.file_url}
-                                    download={attachment.file_name}
-                                    className="text-sm text-blue-400 hover:text-blue-300"
-                                  >
-                                    Download {attachment.file_name}
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      <p
-                        className={`text-xs mt-1 ${
+                      <div
+                        className={`max-w-[85%] md:max-w-[70%] rounded-lg p-3 ${
                           message.sender_id === selectedChat.client_id
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
                         }`}
                       >
-                        {message.sender_id !== selectedChat.client_id && (
-                          <span className="text-sm text-gray-400">
-                            {message.sender.name}
-                          </span>
-                        )}
-
-                        <span className="text-xs text-gray-500">
-                          {new Date(message.created_at).toLocaleTimeString()}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {message.time_ago}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            <form onSubmit={handleSendMessage} className="p-4 border-t">
-              <div className="flex space-x-2">
-                <label htmlFor="file-input" className="cursor-pointer">
-                  <Paperclip className="h-6 w-6 mt-2 text-muted-foreground" />
-                  <input
-                    id="file-input"
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1"
-                />
-                <Button type="submit">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-              {attachmentPreviews.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {attachmentPreviews.map((preview, index) => {
-                    const file = attachments[index];
-                    const isImage = file.type.startsWith("image/");
-
-                    return (
-                      <div key={index} className="relative">
-                        {isImage ? (
-                          <img
-                            src={preview}
-                            alt={`Attachment ${index}`}
-                            className="h-16 w-16 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="h-16 w-16 flex flex-col items-center justify-center bg-gray-100 rounded-lg border border-gray-200">
-                            <Paperclip className="h-6 w-6 text-gray-500" />
-                            <p className="text-xs text-gray-700 truncate w-full px-1 text-center">
-                              {file.name}
-                            </p>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeAttachment(index)}
-                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                        <p>{message?.message}</p>
+                        {message.attachments &&
+                          message.attachments.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {message.attachments.map((attachment) => (
+                                <div
+                                  key={attachment.id}
+                                  className="flex items-center space-x-2"
+                                >
+                                  {attachment.file_type.includes("image") ? (
+                                    <img
+                                      src={attachment.file_url}
+                                      alt={attachment.file_name}
+                                      className="max-w-full h-auto rounded-lg"
+                                    />
+                                  ) : (
+                                    <a
+                                      href={attachment.file_url}
+                                      download={attachment.file_name}
+                                      className="text-sm text-blue-400 hover:text-blue-300"
+                                    >
+                                      Download {attachment.file_name}
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        <p
+                          className={`text-xs mt-1 ${
+                            message.sender_id === selectedChat.client_id
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
+                          }`}
                         >
-                          <X className="h-3 w-3" />
-                        </button>
+                          {message.sender_id !== selectedChat.client_id && (
+                            <span className="text-sm text-gray-400">
+                              {message.sender.name}
+                            </span>
+                          )}
+
+                          <span className="text-xs text-gray-500">
+                            {new Date(message.created_at).toLocaleTimeString()}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {message.time_ago}
+                          </span>
+                        </p>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
                 </div>
-              )}
-            </form>
-          </>
-        ) : (
-          <>
+              </ScrollArea>
+
+              <form onSubmit={handleSendMessage} className="p-4 border-t">
+                <div className="flex space-x-2">
+                  <label htmlFor="file-input" className="cursor-pointer">
+                    <Paperclip className="h-6 w-6 mt-2 text-muted-foreground" />
+                    <input
+                      id="file-input"
+                      type="file"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1"
+                  />
+                  <Button type="submit">
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                {attachmentPreviews.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {attachmentPreviews.map((preview, index) => {
+                      const file = attachments[index];
+                      const isImage = file.type.startsWith("image/");
+
+                      return (
+                        <div key={index} className="relative">
+                          {isImage ? (
+                            <img
+                              src={preview}
+                              alt={`Attachment ${index}`}
+                              className="h-16 w-16 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="h-16 w-16 flex flex-col items-center justify-center bg-gray-100 rounded-lg border border-gray-200">
+                              <Paperclip className="h-6 w-6 text-gray-500" />
+                              <p className="text-xs text-gray-700 truncate w-full px-1 text-center">
+                                {file.name}
+                              </p>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(index)}
+                            className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </form>
+            </>
+          ) : (
             <div className="flex-1 flex flex-col items-center justify-center">
               <p>Select a chat to start a conversation.</p>
             </div>
-          </>
-        )}
-      </Card>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
