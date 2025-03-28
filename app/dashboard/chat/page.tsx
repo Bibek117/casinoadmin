@@ -18,7 +18,7 @@ interface Client {
   email?: string;
   is_superadmin?: number;
   is_admin?: number;
-  online_status?: boolean;
+  is_online?: boolean;
   is_active?: number;
   email_verified_at?: string;
   created_at?: string;
@@ -251,7 +251,11 @@ export default function ChatPage() {
                       {chat.unread_count}
                     </span>
                   )}
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                  {chat?.client?.is_online ? (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                  ) : (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-gray-400 rounded-full border-2 border-background" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
@@ -295,7 +299,7 @@ export default function ChatPage() {
                 <div>
                   <p className="font-medium">{selectedChat?.client.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedChat?.client.online_status ? "Online" : "Offline"}
+                    {selectedChat?.client.is_online ? "Online" : "Offline"}
                   </p>
                 </div>
               </div>
