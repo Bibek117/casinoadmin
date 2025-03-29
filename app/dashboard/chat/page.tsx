@@ -92,6 +92,48 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // useEffect(() => {
+  //   if (echo && chats.length > 0) {
+  //     const channels = chats.map((chat) => {
+  //       return echo.private(`chat.messages.${chat.id}`);
+  //     });
+
+  //     channels.forEach((channel) => {
+  //       channel.listen("MessageSent", (e: { message: Message }) => {
+  //         if (e.message.chat_id === selectedChat?.id) {
+  //           setMessages((prevMessages) => [...prevMessages, e.message]);
+  //           axiosInstance.patch(`api/messages/markAsRead/${e.message.id}`);
+  //         }
+  //         setChats((prevChats) =>
+  //           prevChats.map((chat) => {
+  //             if (
+  //               chat.id === e.message.chat_id &&
+  //               e.message.sender_id == chat.client_id
+  //             ) {
+  //               return {
+  //                 ...chat,
+  //                 unread_count: chat.unread_count + 1,
+  //                 messages: [e.message],
+  //               };
+  //             } else if (chat.id === e.message.chat_id) {
+  //               return {
+  //                 ...chat,
+  //                 messages: [e.message],
+  //               };
+  //             }
+  //             return chat;
+  //           })
+  //         );
+  //       });
+  //     });
+
+  //     return () => {
+  //       channels.forEach((channel) => {
+  //         channel.stopListening("MessageSent");
+  //       });
+  //     };
+  //   }
+  // }, [echo, chats, selectedChat]);
   useEffect(() => {
     if (echo && chats.length > 0) {
       const channels = chats.map((chat) => {
@@ -104,20 +146,19 @@ export default function ChatPage() {
             setMessages((prevMessages) => [...prevMessages, e.message]);
             axiosInstance.patch(`api/messages/markAsRead/${e.message.id}`);
           }
+
           setChats((prevChats) =>
             prevChats.map((chat) => {
-              if (
-                chat.id === e.message.chat_id &&
-                e.message.sender_id == chat.client_id
-              ) {
+              if (chat.id === e.message.chat_id) {
+                const shouldIncrementUnread =
+                  e.message.sender_id === chat.client_id &&
+                  chat.id !== selectedChat?.id;
+
                 return {
                   ...chat,
-                  unread_count: chat.unread_count + 1,
-                  messages: [e.message],
-                };
-              } else if (chat.id === e.message.chat_id) {
-                return {
-                  ...chat,
+                  unread_count: shouldIncrementUnread
+                    ? chat.unread_count + 1
+                    : chat.unread_count,
                   messages: [e.message],
                 };
               }
