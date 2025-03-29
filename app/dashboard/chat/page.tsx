@@ -10,6 +10,7 @@ import { Send, Search, Paperclip, X, Menu, ArrowLeft } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import useEcho from "@/hooks/echo";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { usePermission } from "@/hooks/usePermission";
 
 interface Client {
   id: number;
@@ -36,7 +37,7 @@ interface Message {
   time_ago: string;
   message_by_admin: number;
   sender: Client;
-  attachments?: Attachment[]; // Optional if attachments exist
+  attachments?: Attachment[];
 }
 
 interface Chat {
@@ -71,12 +72,16 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [showChatList, setShowChatList] = useState(true);
+  const { can } = usePermission();
+
+  if (!can("message-view")) {
+    return null;
+  }
 
   const toggleChatList = () => {
     setShowChatList(!showChatList);
   };
 
-  // Close chat list when chat is selected on mobile
   useEffect(() => {
     if (isMobile && selectedChat) {
       setShowChatList(false);
@@ -86,6 +91,7 @@ export default function ChatPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
   useEffect(() => {
     if (echo && chats.length > 0) {
       const channels = chats.map((chat) => {
@@ -150,6 +156,7 @@ export default function ChatPage() {
       fetchMessages(selectedChat.id);
     }
   }, [selectedChat]);
+
   const fetchChats = async () => {
     try {
       const res = await axiosInstance.get("api/chats");
@@ -165,6 +172,17 @@ export default function ChatPage() {
       setMessages(res.data);
     } catch (error) {
       console.error("Failed to fetch messages:", error);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: number) => {
+    try {
+      await axiosInstance.delete(`api/messages/${messageId}`);
+      setMessages((prevMessages) =>
+        prevMessages.filter((msg) => msg.id !== messageId)
+      );
+    } catch (error) {
+      console.error("Failed to delete message:", error);
     }
   };
 
@@ -192,7 +210,7 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    // if (!newMessage.trim() && attachments.length === 0) return;
+    if (!newMessage.trim() && attachments.length === 0) return;
 
     const formData = new FormData();
     formData.append("message", newMessage);
@@ -249,7 +267,7 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Chat List - Hidden on mobile when chat is selected */}
+      {/* Chat List */}
       <Card
         className={`w-full md:w-80 flex flex-col ${
           isMobile ? (showChatList ? "absolute inset-0 z-20" : "hidden") : ""
@@ -370,12 +388,21 @@ export default function ChatPage() {
                       }`}
                     >
                       <div
-                        className={`max-w-[85%] md:max-w-[70%] rounded-lg p-3 ${
+                        className={`max-w-[85%] md:max-w-[70%] rounded-lg p-3 relative ${
                           message.sender_id === selectedChat.client_id
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted"
                         }`}
                       >
+                        {can("message-delete") && (
+                          <button
+                            onClick={() => handleDeleteMessage(message.id)}
+                            className="absolute -top-2 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                            title="Delete message"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                         <p>{message?.message}</p>
                         {message.attachments &&
                           message.attachments.length > 0 && (

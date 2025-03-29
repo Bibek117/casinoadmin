@@ -25,11 +25,6 @@ const sidebarNavItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
-  // {
-  //   title: "Users",
-  //   href: "/dashboard/users",
-  //   icon: Users,
-  // },
   {
     title: "Users Management",
     icon: Users,
@@ -55,6 +50,7 @@ const sidebarNavItems = [
     title: "Chat",
     href: "/dashboard/chat",
     icon: MessageSquare,
+    permission: "chat-view",
   },
   {
     title: "Activity Logs",
