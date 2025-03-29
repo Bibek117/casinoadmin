@@ -443,6 +443,16 @@ export default function ChatPage() {
                               {message.sender.name}
                             </span>
                           )}
+                          {message.sender_id !== selectedChat.client_id &&
+                            (message.is_read ? (
+                              <span className="text-sm text-green-400">
+                                seen
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-500">
+                                sent
+                              </span>
+                            ))}
 
                           <span className="text-xs text-gray-500">
                             {new Date(message.created_at).toLocaleTimeString()}
