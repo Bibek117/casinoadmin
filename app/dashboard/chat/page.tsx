@@ -50,7 +50,7 @@ interface Chat {
   updated_at: string;
   unread_count: number;
   client: Client;
-  messages: Message[];
+  messages?: Message[];
 }
 
 interface Attachment {
@@ -370,18 +370,18 @@ export default function ChatPage() {
                   <div className="flex justify-between items-center">
                     <p className="font-medium truncate">{chat.client.name}</p>
                   </div>
-                  {!chat.messages[0].message_by_admin &&
-                  !chat.messages[0].is_read ? (
+                  {!chat?.messages[0]?.message_by_admin &&
+                  !chat?.messages[0]?.is_read ? (
                     <p className="text-bold text-neutral-400 truncat">
-                      {chat.messages[0].message}
+                      {chat?.messages[0]?.message}
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground truncate">
-                      {chat.messages[0].message}
+                      {chat?.messages[0]?.message}
                     </p>
                   )}
                   <p className="text-sm text-green-800">
-                    {chat.messages[0].time_ago}
+                    {chat?.messages[0]?.time_ago}
                   </p>
                 </div>
               </div>
