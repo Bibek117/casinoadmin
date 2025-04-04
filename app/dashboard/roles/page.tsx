@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -8,18 +8,19 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { motion } from "framer-motion"
-import { Shield, Trash2, Edit } from "lucide-react"
-import axiosInstance from "@/lib/axios"
-import { usePermission } from "@/hooks/usePermission"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/context/AuthProvider"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
+import { Shield, Trash2, Edit } from "lucide-react";
+import axiosInstance from "@/lib/axios";
+import { usePermission } from "@/hooks/usePermission";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 interface Permission {
   id: string;
@@ -39,63 +40,66 @@ interface PermissionGroup {
 }
 
 export default function RolesPage() {
-  const { can } = usePermission()
-  const { refetchPermissions } = useAuth()
-  const router = useRouter()
-  const [roles, setRoles] = useState<Role[]>([])
-  const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([])
-  const [activeTab, setActiveTab] = useState("list")
-  const [roleName, setRoleName] = useState("")
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
-  const [isEditing, setIsEditing] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const { can } = usePermission();
+  const { refetchPermissions } = useAuth();
+  const router = useRouter();
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<
+    Permission[]
+  >([]);
+  const [activeTab, setActiveTab] = useState("list");
+  const [roleName, setRoleName] = useState("");
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!can('role-view')) {
-      router.push('/dashboard')
+    if (!can("role-view")) {
+      router.push("/dashboard");
     }
-  }, [can, router])
+  }, [can, router]);
 
   useEffect(() => {
-    fetchRoles()
-    fetchPermissions()
-  }, [])
+    fetchRoles();
+    fetchPermissions();
+  }, []);
 
   const fetchRoles = async () => {
     try {
-      const response = await axiosInstance.get('/api/admin/roles/all')
-      setRoles(response.data.roles)
+      const response = await axiosInstance.get("/api/admin/roles/all");
+      setRoles(response.data.roles);
     } catch (error) {
-      console.error('Error fetching roles:', error)
+      console.error("Error fetching roles:", error);
     }
-  }
+  };
 
   const fetchPermissions = async () => {
     try {
-      const response = await axiosInstance.get('/api/admin/roles/permissions')
-      setAvailablePermissions(response.data.permissions)
+      const response = await axiosInstance.get("/api/admin/roles/permissions");
+      setAvailablePermissions(response.data.permissions);
     } catch (error) {
-      console.error('Error fetching permissions:', error)
+      console.error("Error fetching permissions:", error);
     }
-  }
+  };
 
   const handlePermissionToggle = (permission: Permission) => {
-    const [groupName, action] = permission.name.split('-');
-    
+    const [groupName, action] = permission.name.split("-");
+
     // If trying to uncheck a "view" permission
-    if (action === 'view' && selectedPermissions.includes(permission.name)) {
+    if (action === "view" && selectedPermissions.includes(permission.name)) {
       // Remove all permissions from this group
-      setSelectedPermissions(current =>
-        current.filter(name => !name.startsWith(groupName + '-'))
+      setSelectedPermissions((current) =>
+        current.filter((name) => !name.startsWith(groupName + "-"))
       );
       return;
     }
 
     // If trying to check a non-view permission
-    if (action !== 'view') {
+    if (action !== "view") {
       const viewPermission = `${groupName}-view`;
       const hasViewPermission = selectedPermissions.includes(viewPermission);
-      
+
       if (!hasViewPermission) {
         // Can't select non-view permissions without view permission
         return;
@@ -103,62 +107,68 @@ export default function RolesPage() {
     }
 
     // Normal toggle behavior
-    setSelectedPermissions(current =>
+    setSelectedPermissions((current) =>
       current.includes(permission.name)
-        ? current.filter(name => name !== permission.name)
+        ? current.filter((name) => name !== permission.name)
         : [...current, permission.name]
     );
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
       if (isEditing && editingId) {
         await axiosInstance.put(`/api/admin/roles/update`, {
           role_id: editingId,
-          permissions: selectedPermissions
-        })
-        await refetchPermissions()
+          permissions: selectedPermissions,
+        });
+        await refetchPermissions();
       } else {
         await axiosInstance.post(`/api/admin/roles/create`, {
           name: roleName,
-          permissions: selectedPermissions
-        })
+          permissions: selectedPermissions,
+        });
       }
-      await fetchRoles()
-      setRoleName("")
-      setSelectedPermissions([])
-      setIsEditing(false)
-      setEditingId(null)
-      setActiveTab("list")
+      await fetchRoles();
+      setRoleName("");
+      setSelectedPermissions([]);
+      setIsEditing(false);
+      setEditingId(null);
+      setActiveTab("list");
     } catch (error) {
-      console.error('Error saving role:', error)
+      console.error("Error saving role:", error);
     }
-  }
+  };
 
   const handleDeleteRole = async (id: string) => {
     try {
       await axiosInstance.delete(`/api/admin/roles/delete`, {
-        data: { role_id: id }
-      })
-      await refetchPermissions()
-      setRoles(prevRoles => prevRoles.filter(role => role.id !== id))
-    } catch (error) {
-      console.error('Error deleting role:', error)
+        data: { role_id: id },
+      });
+      await refetchPermissions();
+      setRoles((prevRoles) => prevRoles.filter((role) => role.id !== id));
+    } catch (error: any) {
+      console.error("Error deleting role:", error);
+      toast({
+        title: "error",
+        description: error?.error,
+      });
     }
-  }
+  };
 
   const handleEditClick = (roleId: string) => {
-    const role = roles.find(role => role.id === roleId);
+    const role = roles.find((role) => role.id === roleId);
     if (!role) return;
-    
-    console.log('Editing role:', role);
-    console.log('Role permissions:', role.permissions);
-    
+
+    console.log("Editing role:", role);
+    console.log("Role permissions:", role.permissions);
+
     setRoleName(role.name);
     // Extract just the permission names from the permission objects
-    const permissionNames = role.permissions.map(permission => permission.name);
-    console.log('Setting permission names:', permissionNames);
+    const permissionNames = role.permissions.map(
+      (permission) => permission.name
+    );
+    console.log("Setting permission names:", permissionNames);
     setSelectedPermissions(permissionNames);
     setEditingId(roleId);
     setIsEditing(true);
@@ -167,17 +177,17 @@ export default function RolesPage() {
 
   const groupPermissions = (permissions: Permission[]): PermissionGroup[] => {
     const groups = permissions.reduce((acc, permission) => {
-      const groupName = permission.name.split('-')[0];
-      
+      const groupName = permission.name.split("-")[0];
+
       const displayName = groupName
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
 
       if (!acc[groupName]) {
         acc[groupName] = {
           name: displayName,
-          permissions: []
+          permissions: [],
         };
       }
       acc[groupName].permissions.push(permission);
@@ -187,8 +197,8 @@ export default function RolesPage() {
     return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  if (!can('role-view')) {
-    return null
+  if (!can("role-view")) {
+    return null;
   }
 
   return (
@@ -198,7 +208,7 @@ export default function RolesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Role Management</h2>
           <TabsList>
             <TabsTrigger value="list">View Roles</TabsTrigger>
-            {can('role-create') && (
+            {can("role-create") && (
               <TabsTrigger value="create">Create Role</TabsTrigger>
             )}
           </TabsList>
@@ -216,7 +226,7 @@ export default function RolesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-end space-x-2">
-                    {can('role-update') && (
+                    {can("role-update") && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -225,7 +235,7 @@ export default function RolesPage() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
-                    {can('role-delete') && (
+                    {can("role-delete") && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -241,7 +251,7 @@ export default function RolesPage() {
           </div>
         </TabsContent>
 
-        {can('role-create') && (
+        {can("role-create") && (
           <TabsContent value="create" className="mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -250,9 +260,13 @@ export default function RolesPage() {
             >
               <Card>
                 <CardHeader>
-                  <CardTitle>{isEditing ? 'Edit Role' : 'Create New Role'}</CardTitle>
+                  <CardTitle>
+                    {isEditing ? "Edit Role" : "Create New Role"}
+                  </CardTitle>
                   <CardDescription>
-                    {isEditing ? 'Modify role and permissions' : 'Define a new role and assign permissions'}
+                    {isEditing
+                      ? "Modify role and permissions"
+                      : "Define a new role and assign permissions"}
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
@@ -267,18 +281,26 @@ export default function RolesPage() {
                         disabled={isEditing}
                       />
                     </div>
-                    
+
                     <div className="space-y-4">
                       <Label className="text-lg">Permissions</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {groupPermissions(availablePermissions).map((group) => (
-                          <div key={group.name} className="border rounded-lg p-4">
-                            <h3 className="font-medium text-sm text-muted-foreground mb-3">{group.name}</h3>
+                          <div
+                            key={group.name}
+                            className="border rounded-lg p-4"
+                          >
+                            <h3 className="font-medium text-sm text-muted-foreground mb-3">
+                              {group.name}
+                            </h3>
                             <div className="grid grid-cols-2 gap-2">
                               {group.permissions.map((permission) => {
-                                const [groupName, action] = permission.name.split('-');
+                                const [groupName, action] =
+                                  permission.name.split("-");
                                 const viewPermission = `${groupName}-view`;
-                                const isDisabled = action !== 'view' && !selectedPermissions.includes(viewPermission);
+                                const isDisabled =
+                                  action !== "view" &&
+                                  !selectedPermissions.includes(viewPermission);
 
                                 return (
                                   <div
@@ -287,13 +309,21 @@ export default function RolesPage() {
                                   >
                                     <Checkbox
                                       id={permission.name}
-                                      checked={selectedPermissions.includes(permission.name)}
-                                      onCheckedChange={() => handlePermissionToggle(permission)}
+                                      checked={selectedPermissions.includes(
+                                        permission.name
+                                      )}
+                                      onCheckedChange={() =>
+                                        handlePermissionToggle(permission)
+                                      }
                                       disabled={isDisabled}
                                     />
-                                    <Label 
-                                      htmlFor={permission.name} 
-                                      className={`text-sm ${isDisabled ? 'text-muted-foreground' : ''}`}
+                                    <Label
+                                      htmlFor={permission.name}
+                                      className={`text-sm ${
+                                        isDisabled
+                                          ? "text-muted-foreground"
+                                          : ""
+                                      }`}
                                     >
                                       {action}
                                     </Label>
@@ -309,7 +339,7 @@ export default function RolesPage() {
                   <CardFooter>
                     <Button type="submit" className="w-full">
                       <Shield className="mr-2 h-4 w-4" />
-                      {isEditing ? 'Update Role' : 'Create Role'}
+                      {isEditing ? "Update Role" : "Create Role"}
                     </Button>
                   </CardFooter>
                 </form>
@@ -319,5 +349,5 @@ export default function RolesPage() {
         )}
       </Tabs>
     </div>
-  )
+  );
 }
