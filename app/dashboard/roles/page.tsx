@@ -151,7 +151,7 @@ export default function RolesPage() {
       console.error("Error deleting role:", error);
       toast({
         title: "error",
-        description: error?.response?.data?.message,
+        description: error?.response?.data?.error,
       });
     }
   };
