@@ -11,6 +11,7 @@ import axiosInstance from "@/lib/axios";
 import useEcho from "@/hooks/echo";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { usePermission } from "@/hooks/usePermission";
+import VoiceRecorder from "@/components/VoiceRecoder";
 
 interface Client {
   id: number;
@@ -38,6 +39,8 @@ interface Message {
   message_by_admin?: number;
   sender?: Client;
   attachments?: Attachment[];
+  voice_message_url?: string;
+  voice_message_path?: string;
 }
 
 interface Chat {
@@ -419,6 +422,15 @@ export default function ChatPage() {
                           </button>
                         )}
                         <p>{message.message}</p>
+                        {message.voice_message_path && (
+                          <div className="mt-2">
+                            <audio
+                              controls
+                              src={message.voice_message_path}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
                         {message.attachments &&
                           message.attachments.length > 0 && (
                             <div className="mt-2 space-y-2">
@@ -501,6 +513,28 @@ export default function ChatPage() {
                       className="hidden"
                     />
                   </label>
+                  <VoiceRecorder
+                    onRecordingComplete={(audioBlob) => {
+                      const formData = new FormData();
+                      formData.append(
+                        "voice_message",
+                        audioBlob,
+                        `voice-${Date.now()}.wav`
+                      );
+                      formData.append("chat_id", String(selectedChat?.id));
+
+                      axiosInstance
+                        .post(`api/messages/${selectedChat?.id}`, formData, {
+                          headers: {
+                            "Content-Type": "multipart/form-data",
+                          },
+                        })
+                        .catch((error) => {
+                          console.error("Error sending voice message:", error);
+                          // Handle error appropriately
+                        });
+                    }}
+                  />
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
