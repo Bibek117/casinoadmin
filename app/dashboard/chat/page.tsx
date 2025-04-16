@@ -468,9 +468,24 @@ export default function ChatPage() {
                           {message.sender_id !== selectedChat.client_id &&
                             message.sender?.name && (
                               <span className="text-sm text-gray-400">
-                                {message.sender.name}
+                                {message.sender.name} &nbsp;
                               </span>
                             )}
+                          {message.created_at && (
+                            <span className="text-xs text-gray-500">
+                              {new Date(
+                                message.created_at
+                              ).toLocaleTimeString()}{" "}
+                              &nbsp;
+                            </span>
+                          )}
+                          {message.time_ago && (
+                            <span className="text-xs text-gray-500">
+                              {message.time_ago}
+                            </span>
+                          )}
+                        </p>
+                        <p>
                           {message.sender_id !== selectedChat.client_id &&
                             (message.is_read ? (
                               <span className="text-sm text-green-400">
@@ -481,18 +496,6 @@ export default function ChatPage() {
                                 sent
                               </span>
                             ))}
-                          {message.created_at && (
-                            <span className="text-xs text-gray-500">
-                              {new Date(
-                                message.created_at
-                              ).toLocaleTimeString()}
-                            </span>
-                          )}
-                          {message.time_ago && (
-                            <span className="text-xs text-gray-500">
-                              {message.time_ago}
-                            </span>
-                          )}
                         </p>
                       </div>
                     </div>
