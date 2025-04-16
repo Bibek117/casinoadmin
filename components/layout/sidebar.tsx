@@ -47,6 +47,12 @@ const sidebarNavItems = [
     permission: "banner-view",
   },
   {
+    title: "Feature Banner",
+    href: "/dashboard/feature-banner",
+    icon: FileText,
+    permission: "banner-view",
+  },
+  {
     title: "Chat",
     href: "/dashboard/chat",
     icon: MessageSquare,
