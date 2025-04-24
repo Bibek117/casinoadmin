@@ -118,12 +118,8 @@ export default function RoleAssignmentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center">
         <h2 className="text-3xl font-bold tracking-tight">Role Assignment</h2>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Assign New Role
-        </Button>
       </div>
 
       <Card>
